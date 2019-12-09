@@ -42,14 +42,15 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
         match Pin::new(&mut this.stream).poll_read(cx, &mut buffer) {
             Poll::Pending => {
                 if this.exit {
-                    return Poll::Ready(None);
+                    Poll::Ready(None)
+                } else {
+                    Poll::Pending
                 }
-                return Poll::Pending;
             }
             Poll::Ready(Ok(l)) if l == 0 => {
                 this.exit = true;
                 let e = stdio::Error::new(stdio::ErrorKind::UnexpectedEof, "Received 0 bytes");
-                return Poll::Ready(Some(Err(e.into())));
+                Poll::Ready(Some(Err(e.into())))
             }
             Poll::Ready(Ok(l)) => {
                 this.read_buffer.extend(&buffer[..l]);
@@ -66,25 +67,25 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
                 match frame {
                     0 => {
                         this.exit = true;
-                        return Poll::Ready(Some(Ok(from_utf8(&this.read_buffer.split_to(size+4)[..])
+                        Poll::Ready(Some(Ok(from_utf8(&this.read_buffer.split_to(size+4)[..])
                             .expect("failed to encode utf8")
-                            .into())));
+                            .into())))
                     }
                     1 => {
                         this.exit = true;
-                        return Poll::Ready(Some(Err(NsqError::from(
+                        Poll::Ready(Some(Err(NsqError::from(
                             from_utf8(&this.read_buffer.split_to(size+4)[..]).expect("failed to encode utf8"),
-                        ))));
+                        ))))
                     }
                     2 => {
-                        return Poll::Ready(Some(
+                        Poll::Ready(Some(
                             Ok(decode_msg(&mut this.read_buffer.split_to(size+4)[..]).into()),
-                        ));
+                        ))
                     }
                     _ => unreachable!(),
                 }
             }
-            Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
+            Poll::Ready(Err(e)) => Poll::Ready(Some(Err(e.into()))),
         }
     }
 }

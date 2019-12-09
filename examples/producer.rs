@@ -1,6 +1,6 @@
-use nsq_rust::{Client, Config, Pub};
+use nsq_rust::{Client, Config, Pub, Mpub, Dpub};
 use async_std::task;
-use std::path::PathBuf;
+//use std::path::PathBuf;
 use env_logger;
 use std::env;
 
@@ -13,8 +13,8 @@ fn main() {
     env_logger::init();
     task::block_on(async {
         let config = Config::new();
-        let cafile = PathBuf::from("./tests/end.chain");
-        if let Err(e) = Client::new("localhost:4150", config, None, Some(cafile)).publish(my_pub()).await {
+        //let cafile = PathBuf::from("./tests/end.chain");
+        if let Err(e) = Client::new("localhost:4150", config, None, None).publish(my_pub()).await {
             eprintln!("{:?}", e);
         }
     })

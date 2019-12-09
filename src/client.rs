@@ -99,7 +99,7 @@ impl Client {
         let res = match stream.next().await.unwrap() {
             Err(e) => {
                 println!("TLS connection error: {:?}", e);
-                return Err(NsqError::from(e));
+                return Err(e);
             },
             Ok(s) => {
                 s

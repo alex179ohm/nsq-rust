@@ -6,19 +6,17 @@ use serde::{Deserialize, Serialize};
 ///```no-run
 /// use nsq_client::{Connection, Config};
 ///
-/// fn main() {
-///     let sys = System::new("consumer");
-///     let config = Config::new().client_id("consumer").user_agent("node-1");
-///     Supervisor::start(|_| Connection::new(
-///         "test",
-///         "test",
-///         "0.0.0.0:4150",
-///         Some(config),
-///         None,
-///         None,
-///     ));
-///     sys.run();
-/// }
+/// let sys = System::new("consumer");
+/// let config = Config::new().client_id("consumer").user_agent("node-1");
+/// Supervisor::start(|_| Connection::new(
+///     "test",
+///     "test",
+///     "0.0.0.0:4150",
+///     Some(config),
+///     None,
+///     None,
+/// ));
+/// sys.run();
 ///```
 ///
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -159,10 +157,8 @@ impl Config {
     /// ```no-run
     /// use nsq_client::{Config};
     ///
-    /// fn main() {
-    ///     let config = Config::new();
-    ///     assert_eq!(config, Config::default());
-    /// }
+    /// let config = Config::new();
+    /// assert_eq!(config, Config::default());
     /// ```
     pub fn new() -> Config {
         Config {
@@ -174,10 +170,8 @@ impl Config {
     /// ```no-run
     /// use nsq_client::Config;
     ///
-    /// fn main() {
-    ///     let config = Config::new().client_id("consumer");
-    ///     assert_eq!(config.client_id, Some("consumer".to_owned()));
-    /// }
+    /// let config = Config::new().client_id("consumer");
+    /// assert_eq!(config.client_id, Some("consumer".to_owned()));
     /// ```
     pub fn client_id(mut self, client_id: &str) -> Self {
         self.client_id = Some(client_id.to_owned());
@@ -188,10 +182,8 @@ impl Config {
     /// ```no-run
     /// use nsq_client::Config;
     ///
-    /// fn main() {
-    ///     let config = Config::new().hostname("node-1");
-    ///     assert_eq!(config.hostname, Some("node-1".to_owned()));
-    /// }
+    /// let config = Config::new().hostname("node-1");
+    /// assert_eq!(config.hostname, Some("node-1".to_owned()));
     /// ```
     pub fn hostname<H: Into<String>>(mut self, hostname: H) -> Self {
         self.hostname = Some(hostname.into());
@@ -202,10 +194,8 @@ impl Config {
     /// ```no-run
     /// use nsq_client::Config;
     ///
-    /// fn main() {
-    ///     let config = Config::new().user_agent("consumer-1");
-    ///     assert_eq!(config.user_agent, Some("consumer-1".to_owned()));
-    /// }
+    /// let config = Config::new().user_agent("consumer-1");
+    /// assert_eq!(config.user_agent, Some("consumer-1".to_owned()));
     /// ```
     pub fn user_agent<UA: Into<String>>(mut self, user_agent: UA) -> Self {
         self.user_agent = user_agent.into();
