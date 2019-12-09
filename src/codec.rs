@@ -44,14 +44,6 @@ impl Encoder for Magic {
     }
 }
 
-//pub struct Cls;
-//
-//impl Encoder for Cls {
-//    fn encode(self, buf: &mut BytesMut) {
-//        buf.put(&b"CLS\n"[..]);
-//    }
-//}
-//
 pub struct Identify<'a>(&'a str);
 
 impl<'a> Identify<'a> {
@@ -159,24 +151,6 @@ impl Encoder for Dpub {
         buf.put(self.2.as_slice());
     }
 }
-
-//pub struct Rdy<'a>(&'a str);
-//
-//impl<'a> Rdy<'a> {
-//    pub fn new(n: &'a str) -> Self {
-//        Rdy(n)
-//    }
-//}
-
-//impl<'a> Encoder for Rdy<'a> {
-//    fn encode(self, buf: &mut BytesMut) {
-//        let len = self.0.len();
-//        check_and_reserve(buf, 5 + len);
-//        buf.put(&b"RDY "[..]);
-//        buf.put(self.0.as_bytes());
-//        buf.put(&b"\n"[..]);
-//    }
-//}
 
 pub fn decode_msg(buf: &mut [u8]) -> (i64, u16, String, Vec<u8>) {
     // skip size and frame type
