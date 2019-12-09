@@ -62,23 +62,23 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
                 if l < size {
                     return Poll::Pending;
                 }
-                let frame = BigEndian::read_u32(&this.read_buffer[4..8]);
+                let frame = BigEndian::read_u32(&this.read_buffer.split_to(8)[4..]);
                 match frame {
                     0 => {
                         this.exit = true;
-                        return Poll::Ready(Some(Ok(from_utf8(&this.read_buffer.take()[8..size+4])
+                        return Poll::Ready(Some(Ok(from_utf8(&this.read_buffer.split_to(size+4)[..])
                             .expect("failed to encode utf8")
                             .into())));
                     }
                     1 => {
                         this.exit = true;
                         return Poll::Ready(Some(Err(NsqError::from(
-                            from_utf8(&this.read_buffer[8..]).expect("failed to encode utf8"),
+                            from_utf8(&this.read_buffer.split_to(size+4)[..]).expect("failed to encode utf8"),
                         ))));
                     }
                     2 => {
                         return Poll::Ready(Some(
-                            Ok(decode_msg(&mut this.read_buffer.take()[8..size+4]).into()),
+                            Ok(decode_msg(&mut this.read_buffer.split_to(size+4)[..]).into()),
                         ));
                     }
                     _ => unreachable!(),

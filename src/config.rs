@@ -120,7 +120,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             client_id: get_hostname(),
-            user_agent: String::from("nsq_client"),
+            user_agent: String::from("rust nsq"),
             hostname: get_hostname(),
             deflate: false,
             deflate_level: 6,
