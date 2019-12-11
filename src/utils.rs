@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Auth, Encoder, Identify, Magic, Sub};
+use crate::codec::{Auth, Encoder, Identify, Magic, Sub, Rdy};
 use crate::config::Config;
 use crate::error::NsqError;
 use crate::response::Response;
@@ -85,4 +85,12 @@ where
         return Err(NsqError::from(e));
     }
     io.next().await.unwrap()
+}
+
+pub(crate) async fn rdy<IO: Write + Unpin>(io: &mut IO, buf: &mut BytesMut, rdy: u32) -> NsqResult<()> {
+    Rdy::new(&rdy.to_string()).encode(buf);
+    if let Err(e) = io.write_all(&buf.take()[..]).await {
+        return Err(NsqError::from(e))
+    }
+    Ok(())
 }

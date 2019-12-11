@@ -100,6 +100,23 @@ impl<'a> Encoder for Sub<'a> {
     }
 }
 
+pub struct Rdy<'a>(&'a str);
+
+impl<'a> Rdy<'a> {
+    pub fn new(rdy: &'a str) -> Self {
+        Rdy(rdy)
+    }
+}
+
+impl Encoder for Rdy<'_> {
+    fn encode(self, buf: &mut BytesMut) {
+        check_and_reserve(buf, self.0.len() + 5);
+        buf.put(&b"RDY "[..]);
+        buf.put(self.0.as_bytes());
+        buf.put(&b"\n"[..]);
+    }
+}
+
 pub struct Pub(String, Vec<u8>);
 
 impl Pub {

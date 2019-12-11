@@ -104,6 +104,82 @@ impl Client {
         }
     }
 
+    async fn consumer_tls<CHANNEL, TOPIC, F, T>(
+        self,
+        config: NsqConfig,
+        stream: &mut TcpStream,
+        mut buf: BytesMut,
+        channel: CHANNEL,
+        topic: TOPIC,
+        _future: F,
+    ) -> NsqResult<()>
+    where
+        CHANNEL: Into<String> + Copy + Display,
+        TOPIC: Into<String> + Copy + Display,
+        F: Future<Output = T>,
+        T: Encoder,
+    {
+        let addr: Vec<&str> = self.addr.split(':').collect();
+        let cafile = self.cafile;
+        let connector = if let Some(cafile) = cafile {
+            connector_from_cafile(&cafile)
+                .await
+                .expect("failed to read cafile")
+        } else {
+            TlsConnector::new()
+        };
+        let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
+        let mut stream = NsqIO::new(&mut tls_stream, 1024);
+        stream.next().await.unwrap()?;
+        info!("TLS Ok");
+        if config.auth_required && self.auth.is_some() {
+            let auth_token = self.auth.unwrap();
+            stream.reset();
+            if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
+                let auth: Authentication =
+                    serde_json::from_str(&s).expect("json deserialize error");
+                info!("AUTH: {:?}", auth);
+            }
+        }
+        let res = utils::sub(&mut stream, &mut buf, channel, topic).await?;
+        info!("SUB: {} {}: {:?}", channel, topic, res);
+        let _ = utils::rdy(&mut stream, &mut buf, 1).await?;
+        info!("RDY 1");
+        Ok(())
+    }
+
+    async fn consumer_tcp<CHANNEL, TOPIC, S, F, T>(
+        self,
+        config: NsqConfig,
+        stream: &mut NsqIO<'_, S>,
+        mut buf: BytesMut,
+        channel: CHANNEL,
+        topic: TOPIC,
+        _future: F,
+    ) -> NsqResult<()>
+    where
+        CHANNEL: Into<String> + Display + Copy,
+        TOPIC: Into<String> + Display + Copy,
+        S: AsyncRead + AsyncWrite + Unpin,
+        F: Future<Output = T>,
+        T: Encoder,
+    {
+        if config.auth_required && self.auth.is_some() {
+            let auth_token = self.auth.unwrap();
+            stream.reset();
+            if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
+                let auth: Authentication =
+                    serde_json::from_str(&s).expect("json deserialize error");
+                info!("AUTH: {:?}", auth);
+            }
+        }
+        let res = utils::sub(stream, &mut buf, channel, topic).await?;
+        info!("SUB {} {}: {:?}", channel, topic, res);
+        let _ = utils::rdy(stream, &mut buf, 1).await?;
+        info!("RDY 1");
+        Ok(())
+    }
+
     pub async fn publish<F, T>(self, future: F) -> NsqResult<Response>
     where
         F: Future<Output = T>,
@@ -197,78 +273,6 @@ impl Client {
         msg.encode(&mut buf);
         stream.reset();
         io_pub(stream, &mut buf).await
-    }
-
-    async fn consumer_tls<CHANNEL, TOPIC, F, T>(
-        self,
-        config: NsqConfig,
-        stream: &mut TcpStream,
-        mut buf: BytesMut,
-        channel: CHANNEL,
-        topic: TOPIC,
-        _future: F,
-    ) -> NsqResult<()>
-    where
-        CHANNEL: Into<String> + Copy + Display,
-        TOPIC: Into<String> + Copy + Display,
-        F: Future<Output = T>,
-        T: Encoder,
-    {
-        let addr: Vec<&str> = self.addr.split(':').collect();
-        let cafile = self.cafile;
-        let connector = if let Some(cafile) = cafile {
-            connector_from_cafile(&cafile)
-                .await
-                .expect("failed to read cafile")
-        } else {
-            TlsConnector::new()
-        };
-        let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-        let mut stream = NsqIO::new(&mut tls_stream, 1024);
-        stream.next().await.unwrap()?;
-        info!("TLS Ok");
-        if config.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            stream.reset();
-            if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
-                let auth: Authentication =
-                    serde_json::from_str(&s).expect("json deserialize error");
-                info!("AUTH: {:?}", auth);
-            }
-        }
-        let res = utils::sub(&mut stream, &mut buf, channel, topic).await?;
-        info!("SUB: {} {}: {:?}", channel, topic, res);
-        Ok(())
-    }
-
-    async fn consumer_tcp<CHANNEL, TOPIC, S, F, T>(
-        self,
-        config: NsqConfig,
-        stream: &mut NsqIO<'_, S>,
-        mut buf: BytesMut,
-        channel: CHANNEL,
-        topic: TOPIC,
-        _future: F,
-    ) -> NsqResult<()>
-    where
-        CHANNEL: Into<String> + Display + Copy,
-        TOPIC: Into<String> + Display + Copy,
-        S: AsyncRead + AsyncWrite + Unpin,
-        F: Future<Output = T>,
-        T: Encoder,
-    {
-        if config.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            stream.reset();
-            if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
-                let auth: Authentication =
-                    serde_json::from_str(&s).expect("json deserialize error");
-                info!("AUTH: {:?}", auth);
-            }
-        }
-        let res = utils::sub(stream, &mut buf, channel, topic).await?;
-        info!("SUB {} {}: {:?}", channel, topic, res);
-        Ok(())
     }
 }
 
