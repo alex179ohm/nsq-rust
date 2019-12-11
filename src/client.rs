@@ -43,6 +43,7 @@ use rustls::ClientConfig;
 use std::path::{Path, PathBuf};
 use crate::publish::io_pub;
 
+#[derive(Clone)]
 pub struct Client {
     addr: String,
     config: Config,
