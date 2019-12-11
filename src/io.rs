@@ -54,7 +54,7 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqStream<'a, S> {
             exit: false,
         }
     }
-    
+
     pub fn reset(&mut self) {
         self.exit = false;
     }
@@ -91,6 +91,8 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
                     return Poll::Pending;
                 }
                 let frame = BigEndian::read_u32(&this.read_buffer.split_to(8)[4..]);
+                println!("frame: {:?}", frame);
+                println!("buffer: {:?}", this.read_buffer);
                 match frame {
                     0 => {
                         this.exit = true;

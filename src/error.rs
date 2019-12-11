@@ -21,9 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use std::{fmt, io};
-use std::error::Error;
 use serde_json;
+use std::error::Error;
+use std::{fmt, io};
 
 #[derive(Debug)]
 pub enum NsqError {
@@ -96,7 +96,6 @@ impl From<&'_ str> for NsqError {
             "E_UNAUTHORIZED" => NsqError::Unauthorized,
             _ => unreachable!("invalid error str"),
         }
-
     }
 }
 
