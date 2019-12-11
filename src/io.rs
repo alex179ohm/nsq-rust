@@ -25,10 +25,11 @@ use crate::codec::decode_msg;
 use crate::error::NsqError;
 use crate::response::Response;
 use crate::result::NsqResult;
-use futures::io::{AsyncRead, AsyncWrite, Result};
 use async_std::stream::Stream;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
+use futures::io::{AsyncRead, AsyncWrite, Result};
+use log::debug;
 use std::{
     convert::TryFrom,
     io as stdio,
@@ -36,7 +37,6 @@ use std::{
     str::from_utf8,
     task::{Context, Poll},
 };
-use log::debug;
 
 const HEADER_SIZE: usize = 8;
 
@@ -53,6 +53,10 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqStream<'a, S> {
             read_buffer: BytesMut::with_capacity(max_size),
             exit: false,
         }
+    }
+    
+    pub fn reset(&mut self) {
+        self.exit = false;
     }
 }
 
@@ -90,21 +94,23 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
                 match frame {
                     0 => {
                         this.exit = true;
-                        Poll::Ready(Some(Ok(from_utf8(&this.read_buffer.split_to(size+4)[..])
-                            .expect("failed to encode utf8")
-                            .into())))
+                        Poll::Ready(Some(Ok(from_utf8(
+                            &this.read_buffer.split_to(size + 4)[..],
+                        )
+                        .expect("failed to encode utf8")
+                        .into())))
                     }
                     1 => {
                         this.exit = true;
                         Poll::Ready(Some(Err(NsqError::from(
-                            from_utf8(&this.read_buffer.split_to(size+4)[..]).expect("failed to encode utf8"),
+                            from_utf8(&this.read_buffer.split_to(size + 4)[..])
+                                .expect("failed to encode utf8"),
                         ))))
                     }
-                    2 => {
-                        Poll::Ready(Some(
-                            Ok(decode_msg(&mut this.read_buffer.split_to(size+4)[..]).into()),
-                        ))
-                    }
+                    2 => Poll::Ready(Some(Ok(decode_msg(
+                        &mut this.read_buffer.split_to(size + 4)[..],
+                    )
+                    .into()))),
                     _ => unreachable!(),
                 }
             }
@@ -131,7 +137,11 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for NsqStream<'a, S> {
 }
 
 impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncRead for NsqStream<'a, S> {
-    fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut [u8]) -> Poll<Result<usize>> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<Result<usize>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_read(cx, buf)
     }

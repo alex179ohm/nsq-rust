@@ -1,6 +1,5 @@
 use nsq_rust::{Client, Config, Pub, Mpub, Dpub};
 use async_std::task;
-//use std::path::PathBuf;
 use env_logger;
 use std::env;
 

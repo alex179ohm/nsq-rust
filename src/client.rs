@@ -33,7 +33,7 @@ use crate::codec::Encoder;
 use crate::utils;
 use crate::result::NsqResult;
 use crate::auth::Authentication;
-use crate::io::NsqStream;
+use crate::io::NsqStream as NsqIO;
 use crate::response::Response;
 use crate::config::{Config, NsqConfig};
 use bytes::BytesMut;
@@ -60,14 +60,14 @@ impl Client {
         }
     }
 
-    pub async fn start(self, buf: &mut BytesMut) -> NsqResult<()> {
+    pub async fn consumer(self, buf: &mut BytesMut) -> NsqResult<()> {
         let mut tcp_stream = connect(self.addr.clone()).await?;
         if let Err(e) = utils::magic(&mut tcp_stream, buf).await {
             return Err(e);
         }
-        let mut stream = NsqStream::new(&mut tcp_stream, 1024);
+        let mut io = NsqIO::new(&mut tcp_stream, 1024);
         let nsqd_cfg: NsqConfig;
-        match utils::identify(&mut stream, self.config.clone(), buf).await {
+        match utils::identify(&mut io, self.config.clone(), buf).await {
             Ok(Response::Json(s)) => nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error"),
             Err(e) => return Err(e),
             _ => unreachable!(),
@@ -81,14 +81,15 @@ impl Client {
         } else {
             TlsConnector::new()
         };
-        let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-        let mut stream = NsqStream::new(&mut tls_stream, 1024);
-        if let Err(e) = stream.next().await.unwrap() {
-            debug!("TLS connection error: {:?}", e);
-            return Err(e);
+        if nsqd_cfg.tls_v1 {
+            let mut tls_stream = connector.connect(addr[0], tcp_stream).unwrap().await?;
+            let mut stream = NsqIO::new(&mut tls_stream, 1024);
+            stream.next().await.unwrap()?;
+            info!("TLS Ok");
+            Ok(())
+        } else {
+            Ok(())
         }
-        info!("TLS Ok");
-        Ok(())
     }
 
     pub async fn publish<F, T>(self, future: F) -> NsqResult<Response>
@@ -98,7 +99,7 @@ impl Client {
     {
         let mut buf = BytesMut::new();
         let mut tcp_stream = connect(self.addr.clone()).await?;
-        let mut stream = NsqStream::new(&mut tcp_stream, 1024);
+        let mut stream = NsqIO::new(&mut tcp_stream, 1024);
         if let Err(e) = utils::magic(&mut stream, &mut buf).await {
             return Err(e);
         }
@@ -117,30 +118,37 @@ impl Client {
         } else {
             TlsConnector::new()
         };
-        let mut tls_stream = connector.connect(addr[0], tcp_stream).unwrap().await?;
-        let mut stream = NsqStream::new(&mut tls_stream, 1024);
-        let res = match stream.next().await.unwrap() {
-            Err(e) => {
-                println!("TLS connection error: {:?}", e);
-                return Err(e);
-            },
-            Ok(s) => {
-                s
-            },
-        };
-        info!("TLS: {:?}", res);
-        if nsqd_cfg.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            let mut stream = NsqStream::new(&mut tls_stream, 1024);
-            if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
-                let auth: Authentication = serde_json::from_str(&s).expect("json deserialize error");
-                info!("AUTH: {:?}", auth);
+        if nsqd_cfg.tls_v1 {
+            let mut tls_stream = connector.connect(addr[0], tcp_stream).unwrap().await?;
+            let mut stream = NsqIO::new(&mut tls_stream, 1024);
+            stream.next().await.unwrap()?;
+            info!("TLS Ok");
+            if nsqd_cfg.auth_required && self.auth.is_some() {
+                let auth_token = self.auth.unwrap();
+                stream.reset();
+                if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
+                    let auth: Authentication = serde_json::from_str(&s).expect("json deserialize error");
+                    info!("AUTH: {:?}", auth);
+                }
             }
+            let msg = future.await;
+            msg.encode(&mut buf);
+            stream.reset();
+            io_pub(&mut stream, &mut buf).await
+        } else {
+            if nsqd_cfg.auth_required && self.auth.is_some() {
+                let auth_token = self.auth.unwrap();
+                stream.reset();
+                if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
+                    let auth: Authentication = serde_json::from_str(&s).expect("json deserialize error");
+                    info!("AUTH: {:?}", auth);
+                }
+            }
+            let msg = future.await;
+            msg.encode(&mut buf);
+            stream.reset();
+            io_pub(&mut stream, &mut buf).await
         }
-        let msg = future.await;
-        msg.encode(&mut buf);
-        let mut stream = NsqStream::new(&mut tls_stream, 1024);
-        io_pub(&mut stream, &mut buf).await
     }
 }
 
