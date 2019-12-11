@@ -29,13 +29,13 @@ pub struct Msg {
     body: Vec<u8>,
 }
 
-impl Into<Msg> for (i64, u16, String, Vec<u8>) {
-    fn into(self) -> Msg {
+impl From<(i64, u16, String, Vec<u8>)> for Msg {
+    fn from(t: (i64, u16, String, Vec<u8>)) -> Msg {
         Msg {
-            timestamp: self.0,
-            attemps: self.1,
-            id: self.2,
-            body: self.3,
+            timestamp: t.0,
+            attemps: t.1,
+            id: t.2,
+            body: t.3,
         }
     }
 }

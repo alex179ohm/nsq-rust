@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::auth::Authentication;
+use crate::auth::AuthReply;
 use crate::codec::Encoder;
 use crate::config::{Config, NsqConfig};
 use crate::error::NsqError;
@@ -136,8 +136,7 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
-                let auth: Authentication =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
@@ -168,8 +167,7 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
-                let auth: Authentication =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
@@ -237,8 +235,7 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
-                let auth: Authentication =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
@@ -264,8 +261,7 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
-                let auth: Authentication =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }

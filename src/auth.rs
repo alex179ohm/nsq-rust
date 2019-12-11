@@ -23,8 +23,9 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Authentication response sent by nsqd to the client after the AUTH command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Authentication {
+pub struct AuthReply {
     identity: String,
     identity_url: Option<String>,
     permission_count: i32,
