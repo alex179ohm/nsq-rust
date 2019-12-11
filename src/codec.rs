@@ -26,10 +26,12 @@ use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 
+/// The Encoder trait allow to encode different kind of commands into the BytesMut buffer.
 pub trait Encoder {
     fn encode(self, buf: &mut BytesMut);
 }
 
+/// The Decoder trait allow to decode the received msgs from the the BytesMut buffer.
 pub trait Decoder {
     fn decode<MSG: Message>(buf: BytesMut) -> MSG;
 }

@@ -136,7 +136,8 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply =
+                    serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
@@ -167,7 +168,8 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply =
+                    serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
@@ -235,7 +237,8 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply =
+                    serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
@@ -261,7 +264,8 @@ impl Client {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply =
+                    serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
             }
         }
