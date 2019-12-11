@@ -21,17 +21,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use futures::io::{AsyncWrite, AsyncWriteExt};
-use futures::Stream;
+use crate::error::NsqError;
+use crate::response::Response;
+use crate::result::NsqResult;
 use async_std::stream::StreamExt;
 use bytes::BytesMut;
-use crate::result::NsqResult;
-use crate::response::Response;
-use crate::error::NsqError;
+use futures::io::{AsyncWrite, AsyncWriteExt};
+use futures::Stream;
 
 pub async fn io_pub<S>(io: &mut S, buf: &mut BytesMut) -> NsqResult<Response>
-    where
-        S: AsyncWrite + Stream<Item = NsqResult<Response>> + Unpin,
+where
+    S: AsyncWrite + Stream<Item = NsqResult<Response>> + Unpin,
 {
     if let Err(e) = io.write_all(&buf.take()[..]).await {
         return Err(NsqError::from(e));

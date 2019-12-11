@@ -21,18 +21,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-mod config;
-mod io;
-mod utils;
-mod codec;
-mod client;
-mod error;
-mod response;
 mod auth;
+mod client;
+mod codec;
+mod config;
+mod error;
+mod io;
 mod msg;
-mod result;
 mod publish;
+mod response;
+mod result;
+mod utils;
 
 pub use client::Client;
+pub use codec::{Dpub, Mpub, Pub};
 pub use config::Config;
-pub use codec::{Pub, Dpub, Mpub};

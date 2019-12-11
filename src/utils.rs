@@ -21,25 +21,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::codec::{Auth, Encoder, Identify, Magic, Sub};
 use crate::config::Config;
+use crate::error::NsqError;
 use crate::response::Response;
+use crate::result::NsqResult;
 use async_std::io::prelude::*;
 use async_std::stream::StreamExt;
-use futures::Stream;
-use crate::codec::{Magic, Identify, Auth, Encoder};
 use bytes::BytesMut;
-use crate::result::NsqResult;
-use crate::error::NsqError;
+use futures::Stream;
 
 pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO, buf: &mut BytesMut) -> NsqResult<()> {
-    Magic{}.encode(buf);
+    Magic {}.encode(buf);
     if let Err(e) = io.write_all(&buf.take()[..]).await {
-        return Err(NsqError::from(e))
+        return Err(NsqError::from(e));
     };
     Ok(())
 }
 
-pub(crate) async  fn identify<IO: Write + Stream<Item = NsqResult<Response>> + Unpin>(
+pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Response>> + Unpin>(
     io: &mut IO,
     config: Config,
     buf: &mut BytesMut,
@@ -53,7 +53,11 @@ pub(crate) async  fn identify<IO: Write + Stream<Item = NsqResult<Response>> + U
     io.next().await.unwrap()
 }
 
-pub(crate) async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH, buf: &mut BytesMut) -> NsqResult<Response>
+pub(crate) async fn auth<IO, AUTH>(
+    io: &mut IO,
+    auth: AUTH,
+    buf: &mut BytesMut,
+) -> NsqResult<Response>
 where
     IO: Write + Stream<Item = NsqResult<Response>> + Unpin,
     AUTH: Into<String>,
@@ -62,5 +66,23 @@ where
     if let Err(e) = io.write_all(&buf.take()[..]).await {
         return Err(NsqError::from(e));
     };
+    io.next().await.unwrap()
+}
+
+pub(crate) async fn sub<IO, CHANNEL, TOPIC>(
+    io: &mut IO,
+    buf: &mut BytesMut,
+    channel: CHANNEL,
+    topic: TOPIC,
+) -> NsqResult<Response>
+where
+    IO: Write + Stream<Item = NsqResult<Response>> + Unpin,
+    CHANNEL: Into<String>,
+    TOPIC: Into<String>,
+{
+    Sub::new(&channel.into(), &topic.into()).encode(buf);
+    if let Err(e) = io.write_all(&buf.take()[..]).await {
+        return Err(NsqError::from(e));
+    }
     io.next().await.unwrap()
 }

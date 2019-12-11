@@ -82,6 +82,12 @@ impl<'a> Encoder for Auth<'a> {
 
 pub struct Sub<'a>(&'a str, &'a str);
 
+impl<'a> Sub<'a> {
+    pub fn new(channel: &'a str, topic: &'a str) -> Self {
+        Sub(channel, topic)
+    }
+}
+
 impl<'a> Encoder for Sub<'a> {
     fn encode(self, buf: &mut BytesMut) {
         let len = self.0.len() + self.1.len();
@@ -120,7 +126,7 @@ pub struct Mpub(String, Vec<Vec<u8>>);
 impl Encoder for Mpub {
     fn encode(self, buf: &mut BytesMut) {
         let num_msgs = self.1.len();
-        let total_msgs_len = self.1.iter().fold(0, |acc, e| { acc + e.len() + 4 });
+        let total_msgs_len = self.1.iter().fold(0, |acc, e| acc + e.len() + 4);
         let len = self.0.len();
         check_and_reserve(buf, 14 + len + total_msgs_len);
         buf.put(&b"MPUB "[..]);
