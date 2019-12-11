@@ -31,9 +31,9 @@ pub enum Response {
     Json(String),
 }
 
-impl Into<Response> for &'_ str {
-    fn into(self) -> Response {
-        match self {
+impl From<&'_ str> for Response {
+    fn from(s: &'_ str) -> Response {
+        match s {
             "OK" => Response::Ok,
             "CLOSE_WAIT" => Response::Ok,
             "__heartbeat__" => Response::HeartBeat,
@@ -42,15 +42,15 @@ impl Into<Response> for &'_ str {
     }
 }
 
-impl Into<Response> for (i64, u16, String, Vec<u8>) {
-    fn into(self) -> Response {
-        Response::Msg(self.into())
+impl From<(i64, u16, String, Vec<u8>)> for Response {
+    fn from(t: (i64, u16, String, Vec<u8>)) -> Response {
+        Response::Msg(t.into())
     }
 }
 
-impl Into<Response> for Msg {
-    fn into(self) -> Response {
-        Response::Msg(self)
+impl From<Msg> for Response {
+    fn from(m: Msg) -> Response {
+        Response::Msg(m)
     }
 }
 

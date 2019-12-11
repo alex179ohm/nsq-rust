@@ -94,7 +94,7 @@ impl From<&'_ str> for NsqError {
             "E_TOUCH_FAILED" => NsqError::Touch,
             "E_AUTH_FAILED" => NsqError::Auth,
             "E_UNAUTHORIZED" => NsqError::Unauthorized,
-            _ => unreachable!("invalid error str"),
+            s => unreachable!(s),
         }
     }
 }
