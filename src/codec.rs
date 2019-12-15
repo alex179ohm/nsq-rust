@@ -32,8 +32,8 @@ pub trait Encoder {
 }
 
 /// The Decoder trait allow to decode the received msgs from the the BytesMut buffer.
-pub trait Decoder {
-    fn decode<MSG: Message>(buf: BytesMut) -> MSG;
+pub trait Decoder<MSG: Message> {
+    fn decode(buf: &mut BytesMut) -> MSG;
 }
 
 pub trait Message {}
@@ -174,6 +174,68 @@ impl Encoder for Dpub {
         buf.put(&b"\n"[..]);
         buf.put_u32_be(msg_len as u32);
         buf.put(self.2.as_slice());
+    }
+}
+
+pub struct Touch(String);
+
+impl Touch {
+    fn new(id: String) -> Self {
+        Touch(id)
+    }
+}
+
+impl Encoder for Touch {
+    fn encode(self, buf: &mut BytesMut) {
+        check_and_reserve(buf, self.0.len() + 7);
+        buf.put(&b"TOUCH "[..]);
+        buf.put(self.0.as_bytes());
+        buf.put(&b"\n"[..]);
+    }
+}
+
+pub struct Fin(String);
+
+impl Fin {
+    fn new(id: String) -> Self {
+        Fin(id)
+    }
+}
+
+impl Encoder for Fin {
+    fn encode(self, buf: &mut BytesMut) {
+        check_and_reserve(buf, self.0.len() + 5);
+        buf.put(&b"FIN "[..]);
+        buf.put(self.0.as_bytes());
+        buf.put(&b"\n"[..]);
+    }
+}
+
+pub struct Req(String, String);
+
+impl Req {
+    fn new(id: String, timeout: u32) -> Self {
+        Req(id, timeout.to_string())
+    }
+}
+
+impl Encoder for Req {
+    fn encode(self, buf: &mut BytesMut) {
+        check_and_reserve(buf, self.0.len() + self.1.len() + 6);
+        buf.put(&b"REQ "[..]);
+        buf.put(self.0.as_bytes());
+        buf.put(&b" "[..]);
+        buf.put(self.1.as_bytes());
+        buf.put(&b"\n"[..]);
+    }
+}
+
+pub struct Cls;
+
+impl Encoder for Cls {
+    fn encode(self, buf: &mut BytesMut) {
+        check_and_reserve(buf, 4);
+        buf.put(&b"CLS\n"[..]);
     }
 }
 

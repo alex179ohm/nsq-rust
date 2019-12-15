@@ -1,6 +1,6 @@
 use async_std::task;
+use nsq_rust::prelude::*;
 use env_logger;
-use nsq_rust::{Client, Config, Dpub, Mpub, Pub};
 use std::env;
 
 async fn my_pub() -> Pub {

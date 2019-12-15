@@ -21,21 +21,55 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#[derive(Debug)]
-pub struct Msg {
-    timestamp: i64,
-    attemps: u16,
-    id: String,
-    body: Vec<u8>,
+//use crate::msg::Msg;
+use crate::codec::{decode_msg, Decoder, Message};
+use bytes::BytesMut;
+use std::fmt;
+
+pub enum Msg {
+    HeartBeat,
+    Ok,
+    Msg((i64, u16, String, Vec<u8>)),
+    Json(String),
+}
+
+impl From<&'_ str> for Msg {
+    fn from(s: &'_ str) -> Msg {
+        match s {
+            "OK" => Msg::Ok,
+            "CLOSE_WAIT" => Msg::Ok,
+            "__heartbeat__" => Msg::HeartBeat,
+            s => Msg::Json(String::from(s)),
+        }
+    }
 }
 
 impl From<(i64, u16, String, Vec<u8>)> for Msg {
-    fn from(t: (i64, u16, String, Vec<u8>)) -> Msg {
-        Msg {
-            timestamp: t.0,
-            attemps: t.1,
-            id: t.2,
-            body: t.3,
+    fn from(msg: (i64, u16, String, Vec<u8>)) -> Msg {
+        Msg::Msg(msg)
+    }
+}
+
+impl fmt::Debug for Msg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Msg::*;
+        match self {
+            Ok => write!(f, "OK"),
+            HeartBeat => write!(f, "HEARTBEAT"),
+            Msg(m) => write!(
+                f,
+                "Msg(timestamp: {}, attemps: {}, id: {}, body: {:?}",
+                m.0, m.1, m.2, m.3
+            ),
+            Json(s) => write!(f, "{:?}", s),
         }
+    }
+}
+
+impl Message for Msg {}
+
+impl Decoder<Msg> for Msg {
+    fn decode(buf: &mut BytesMut) -> Msg {
+        Msg::Msg(decode_msg(buf.as_mut()))
     }
 }

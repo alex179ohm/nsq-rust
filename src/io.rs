@@ -23,7 +23,7 @@
 
 use crate::codec::decode_msg;
 use crate::error::NsqError;
-use crate::response::Response;
+use crate::msg::Msg;
 use crate::result::NsqResult;
 use async_std::stream::Stream;
 use byteorder::{BigEndian, ByteOrder};
@@ -40,13 +40,13 @@ use std::{
 
 const HEADER_SIZE: usize = 8;
 
-pub struct NsqStream<'a, S: AsyncRead + AsyncWrite + Unpin> {
+pub struct NsqIO<'a, S: AsyncRead + AsyncWrite + Unpin> {
     stream: &'a mut S,
     read_buffer: BytesMut,
     exit: bool,
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqStream<'a, S> {
+impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqIO<'a, S> {
     pub fn new(stream: &'a mut S, max_size: usize) -> Self {
         Self {
             stream,
@@ -60,8 +60,8 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqStream<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
-    type Item = NsqResult<Response>;
+impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqIO<'a, S> {
+    type Item = NsqResult<Msg>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
@@ -121,7 +121,7 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqStream<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for NsqStream<'a, S> {
+impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_write(cx, buf)
@@ -138,7 +138,7 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for NsqStream<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncRead for NsqStream<'a, S> {
+impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncRead for NsqIO<'a, S> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

@@ -27,12 +27,15 @@ mod codec;
 mod config;
 mod error;
 mod io;
-mod msg;
 mod publish;
-mod response;
+mod msg;
 mod result;
 mod utils;
+mod consumer;
+mod cmd;
 
-pub use client::Client;
-pub use codec::{Dpub, Mpub, Pub};
-pub use config::Config;
+pub mod prelude {
+    pub use crate::client::Client;
+    pub use crate::codec::{Dpub, Mpub, Pub, Touch, Req, Fin, Cls};
+    pub use crate::config::Config;
+}

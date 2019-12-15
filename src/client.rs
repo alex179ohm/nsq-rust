@@ -25,9 +25,9 @@ use crate::auth::AuthReply;
 use crate::codec::Encoder;
 use crate::config::{Config, NsqConfig};
 use crate::error::NsqError;
-use crate::io::NsqStream as NsqIO;
+use crate::io::NsqIO;
 use crate::publish::io_pub;
-use crate::response::Response;
+use crate::msg::Msg;
 use crate::result::NsqResult;
 use crate::utils;
 use async_std::io;
@@ -50,6 +50,7 @@ pub struct Client {
     config: Config,
     auth: Option<String>,
     cafile: Option<PathBuf>,
+    rdy: u32,
 }
 
 impl Client {
@@ -64,6 +65,7 @@ impl Client {
             config,
             auth,
             cafile,
+            rdy: 0,
         }
     }
 
@@ -87,7 +89,7 @@ impl Client {
         let mut stream = NsqIO::new(&mut tcp_stream, 1024);
         let nsqd_cfg: NsqConfig;
         match utils::identify(&mut stream, self.config.clone(), &mut buf).await {
-            Ok(Response::Json(s)) => {
+            Ok(Msg::Json(s)) => {
                 nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error")
             }
             Err(e) => return Err(e),
@@ -135,7 +137,7 @@ impl Client {
         if config.auth_required && self.auth.is_some() {
             let auth_token = self.auth.unwrap();
             stream.reset();
-            if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
+            if let Msg::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
                 let auth: AuthReply =
                     serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
@@ -143,8 +145,8 @@ impl Client {
         }
         let res = utils::sub(&mut stream, &mut buf, channel, topic).await?;
         info!("SUB: {} {}: {:?}", channel, topic, res);
-        let _ = utils::rdy(&mut stream, &mut buf, 1).await?;
-        info!("RDY 1");
+        utils::rdy(&mut stream, &mut buf, self.rdy).await?;
+        info!("RDY {}", self.rdy);
         Ok(())
     }
 
@@ -167,7 +169,7 @@ impl Client {
         if config.auth_required && self.auth.is_some() {
             let auth_token = self.auth.unwrap();
             stream.reset();
-            if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
+            if let Msg::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
                 let auth: AuthReply =
                     serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
@@ -175,12 +177,12 @@ impl Client {
         }
         let res = utils::sub(stream, &mut buf, channel, topic).await?;
         info!("SUB {} {}: {:?}", channel, topic, res);
-        let _ = utils::rdy(stream, &mut buf, 1).await?;
-        info!("RDY 1");
+        utils::rdy(stream, &mut buf, self.rdy).await?;
+        info!("RDY {}", self.rdy);
         Ok(())
     }
 
-    pub async fn publish<F, T>(self, future: F) -> NsqResult<Response>
+    pub async fn publish<F, T>(self, future: F) -> NsqResult<Msg>
     where
         F: Future<Output = T>,
         T: Encoder,
@@ -193,7 +195,7 @@ impl Client {
         }
         let nsqd_cfg: NsqConfig;
         match utils::identify(&mut stream, self.config.clone(), &mut buf).await {
-            Ok(Response::Json(s)) => {
+            Ok(Msg::Json(s)) => {
                 nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error")
             }
             Err(e) => return Err(e),
@@ -215,7 +217,7 @@ impl Client {
         stream: &mut TcpStream,
         mut buf: BytesMut,
         future: F,
-    ) -> NsqResult<Response>
+    ) -> NsqResult<Msg>
     where
         F: Future<Output = T>,
         T: Encoder,
@@ -236,7 +238,7 @@ impl Client {
         if config.auth_required && self.auth.is_some() {
             let auth_token = self.auth.unwrap();
             stream.reset();
-            if let Response::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
+            if let Msg::Json(s) = utils::auth(&mut stream, auth_token, &mut buf).await? {
                 let auth: AuthReply =
                     serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);
@@ -254,7 +256,7 @@ impl Client {
         stream: &mut NsqIO<'_, S>,
         mut buf: BytesMut,
         future: F,
-    ) -> NsqResult<Response>
+    ) -> NsqResult<Msg>
     where
         F: Future<Output = T>,
         T: Encoder,
@@ -263,7 +265,7 @@ impl Client {
         if config.auth_required && self.auth.is_some() {
             let auth_token = self.auth.unwrap();
             stream.reset();
-            if let Response::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
+            if let Msg::Json(s) = utils::auth(stream, auth_token, &mut buf).await? {
                 let auth: AuthReply =
                     serde_json::from_str(&s).expect("json deserialize error");
                 info!("AUTH: {:?}", auth);

@@ -22,16 +22,16 @@
 // SOFTWARE.
 
 use crate::error::NsqError;
-use crate::response::Response;
+use crate::msg::Msg;
 use crate::result::NsqResult;
 use async_std::stream::StreamExt;
 use bytes::BytesMut;
 use futures::io::{AsyncWrite, AsyncWriteExt};
 use futures::Stream;
 
-pub async fn io_pub<S>(io: &mut S, buf: &mut BytesMut) -> NsqResult<Response>
+pub async fn io_pub<S>(io: &mut S, buf: &mut BytesMut) -> NsqResult<Msg>
 where
-    S: AsyncWrite + Stream<Item = NsqResult<Response>> + Unpin,
+    S: AsyncWrite + Stream<Item = NsqResult<Msg>> + Unpin,
 {
     if let Err(e) = io.write_all(&buf.take()[..]).await {
         return Err(NsqError::from(e));

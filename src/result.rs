@@ -22,18 +22,18 @@
 // SOFTWARE.
 
 use crate::error::NsqError;
-use crate::response::Response;
+use crate::msg::Msg;
 
 pub type NsqResult<T> = Result<T, NsqError>;
 
-impl From<Response> for NsqResult<Response> {
-    fn from(r: Response) -> NsqResult<Response> {
+impl From<Msg> for NsqResult<Msg> {
+    fn from(r: Msg) -> NsqResult<Msg> {
         NsqResult::Ok(r)
     }
 }
 
-impl From<NsqError> for NsqResult<Response> {
-    fn from(e: NsqError) -> NsqResult<Response> {
+impl From<NsqError> for NsqResult<Msg> {
+    fn from(e: NsqError) -> NsqResult<Msg> {
         NsqResult::Err(e)
     }
 }

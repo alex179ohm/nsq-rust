@@ -24,7 +24,7 @@
 use crate::codec::{Auth, Encoder, Identify, Magic, Rdy, Sub};
 use crate::config::Config;
 use crate::error::NsqError;
-use crate::response::Response;
+use crate::msg::Msg;
 use crate::result::NsqResult;
 use async_std::io::prelude::*;
 use async_std::stream::StreamExt;
@@ -39,11 +39,11 @@ pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO, buf: &mut BytesMut) ->
     Ok(())
 }
 
-pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Response>> + Unpin>(
+pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Msg>> + Unpin>(
     io: &mut IO,
     config: Config,
     buf: &mut BytesMut,
-) -> NsqResult<Response> {
+) -> NsqResult<Msg> {
     if let Ok(msg_string) = serde_json::to_string(&config) {
         Identify::new(msg_string.as_str()).encode(buf);
     };
@@ -57,9 +57,9 @@ pub(crate) async fn auth<IO, AUTH>(
     io: &mut IO,
     auth: AUTH,
     buf: &mut BytesMut,
-) -> NsqResult<Response>
+) -> NsqResult<Msg>
 where
-    IO: Write + Stream<Item = NsqResult<Response>> + Unpin,
+    IO: Write + Stream<Item = NsqResult<Msg>> + Unpin,
     AUTH: Into<String>,
 {
     Auth::new(auth.into().as_str()).encode(buf);
@@ -74,9 +74,9 @@ pub(crate) async fn sub<IO, CHANNEL, TOPIC>(
     buf: &mut BytesMut,
     channel: CHANNEL,
     topic: TOPIC,
-) -> NsqResult<Response>
+) -> NsqResult<Msg>
 where
-    IO: Write + Stream<Item = NsqResult<Response>> + Unpin,
+    IO: Write + Stream<Item = NsqResult<Msg>> + Unpin,
     CHANNEL: Into<String>,
     TOPIC: Into<String>,
 {
