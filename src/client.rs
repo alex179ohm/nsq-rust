@@ -27,9 +27,9 @@ use crate::config::{Config, NsqConfig};
 use crate::error::NsqError;
 use crate::io::NsqIO;
 use crate::msg::Msg;
+use crate::publisher::Publisher;
 use crate::result::NsqResult;
 use crate::utils;
-use crate::publisher::Publisher;
 use async_std::io;
 use async_std::net::{TcpStream, ToSocketAddrs};
 use async_std::stream::StreamExt;
@@ -90,9 +90,7 @@ impl<State> Client<State> {
     }
 }
 
-impl Client<()> {
-
-}
+impl Client<()> {}
 
 impl<State> Client<State> {
     pub async fn consumer<CHANNEL, TOPIC, F, T>(
@@ -160,8 +158,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-                let auth: AuthReply =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }
@@ -190,8 +187,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-                let auth: AuthReply =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }
@@ -219,8 +215,7 @@ impl<State> Client<State> {
         debug!("{:?}", nsqd_cfg);
         println!("Configuration OK: {:?}", nsqd_cfg);
         if nsqd_cfg.tls_v1 {
-            self.publish_tls(nsqd_cfg, &mut tcp_stream, future)
-                .await
+            self.publish_tls(nsqd_cfg, &mut tcp_stream, future).await
         } else {
             self.publish_tcp(nsqd_cfg, &mut stream, future).await
         }
@@ -249,8 +244,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-                let auth: AuthReply =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }
@@ -272,8 +266,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-                let auth: AuthReply =
-                    serde_json::from_str(&s).expect("json deserialize error");
+                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }

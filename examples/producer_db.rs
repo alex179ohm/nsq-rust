@@ -1,9 +1,9 @@
 use async_std::task;
-use nsq_rust::prelude::*;
-use std::error::Error;
-use std::collections::HashMap;
 use femme;
 use log;
+use nsq_rust::prelude::*;
+use std::collections::HashMap;
+use std::error::Error;
 
 struct App {
     pub db: HashMap<String, String>,
@@ -23,13 +23,13 @@ async fn my_pub(app: App) -> Message {
 
 fn main() -> Result<(), Box<dyn Error>> {
     femme::start(log::LevelFilter::Trace)?;
-    task::block_on(async {
-        let config = Config::new();
-        let mut app = App::new();
-        let _ = app.db.insert("test".to_owned(), "msg".to_owned());
-        //let cafile = PathBuf::from("./tests/end.chain");
+    let config = Config::new();
+    let mut app = App::new();
+    let _ = app.db.insert("test".to_owned(), "msg".to_owned());
+    task::block_on(async move {
         let res = Client::with_state("localhost:4150", config, None, None, app)
-            .publish(my_pub).await;
+            .publish(my_pub)
+            .await;
         log::trace!("{:?}", res);
     });
     Ok(())

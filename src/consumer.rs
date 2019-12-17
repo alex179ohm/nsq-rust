@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use futures::future::BoxFuture;
-use futures::Future;
 use crate::cmd::Cmd;
 use crate::msg::Msg;
+use futures::future::BoxFuture;
+use futures::Future;
 
 pub trait Consumer: Send + Sync + 'static {
     type Fut: Future<Output = Cmd> + Send + 'static;

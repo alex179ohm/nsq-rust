@@ -21,22 +21,21 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
 mod auth;
 mod client;
+mod cmd;
 mod codec;
 mod config;
+mod consumer;
 mod error;
 mod io;
 mod msg;
+mod publisher;
 mod result;
 mod utils;
-mod consumer;
-mod publisher;
-mod cmd;
 
 pub mod prelude {
     pub use crate::client::Client;
-    pub use crate::codec::{Dpub, Mpub, Pub, Touch, Req, Fin, Cls, Message};
+    pub use crate::codec::{Cls, Dpub, Fin, Message, Mpub, Pub, Req, Touch};
     pub use crate::config::Config;
 }

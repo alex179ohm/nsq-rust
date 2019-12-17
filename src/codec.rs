@@ -261,7 +261,7 @@ impl Dpub {
     }
 }
 
-impl From<Dpub> for  Message {
+impl From<Dpub> for Message {
     fn from(msg: Dpub) -> Self {
         let msg_len = msg.2.len();
         let len = msg.0.len() + msg.1.len() + msg_len;

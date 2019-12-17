@@ -1,8 +1,8 @@
 use async_std::task;
-use nsq_rust::prelude::*;
-use std::error::Error;
 use femme;
 use log;
+use nsq_rust::prelude::*;
+use std::error::Error;
 
 async fn my_pub(_app: ()) -> Message {
     Pub::new("test".to_owned(), b"ciao".to_vec()).into()
@@ -14,7 +14,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let config = Config::new();
         //let cafile = PathBuf::from("./tests/end.chain");
         let res = Client::new("localhost:4150", config, None, None)
-            .publish(my_pub).await;
+            .publish(my_pub)
+            .await;
         println!("{:?}", res);
     });
     Ok(())

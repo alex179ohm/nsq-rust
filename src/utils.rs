@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Auth, Identify, Magic, Rdy, Sub, Message};
+use crate::codec::{Auth, Identify, Magic, Message, Rdy, Sub};
 use crate::config::Config;
 use crate::error::NsqError;
 use crate::msg::Msg;
@@ -42,7 +42,7 @@ pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Msg>> + Unpin>(
     io: &mut IO,
     config: Config,
 ) -> NsqResult<Msg> {
-    let msg_string = serde_json::to_string(&config)?; 
+    let msg_string = serde_json::to_string(&config)?;
     let buf: Message = Identify::new(msg_string.as_str()).into();
     if let Err(e) = io.write_all(buf.as_bytes_mut()).await {
         return Err(NsqError::from(e));
@@ -50,10 +50,7 @@ pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Msg>> + Unpin>(
     io.next().await.unwrap()
 }
 
-pub(crate) async fn auth<IO, AUTH>(
-    io: &mut IO,
-    auth: AUTH,
-) -> NsqResult<Msg>
+pub(crate) async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH) -> NsqResult<Msg>
 where
     IO: Write + Stream<Item = NsqResult<Msg>> + Unpin,
     AUTH: Into<String>,
@@ -82,10 +79,7 @@ where
     io.next().await.unwrap()
 }
 
-pub(crate) async fn rdy<IO: Write + Unpin>(
-    io: &mut IO,
-    rdy: u32,
-) -> NsqResult<()> {
+pub(crate) async fn rdy<IO: Write + Unpin>(io: &mut IO, rdy: u32) -> NsqResult<()> {
     let buf: Message = Rdy::new(&rdy.to_string()).into();
     if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
         return Err(NsqError::from(e));

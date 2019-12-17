@@ -21,9 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::codec::Message;
 use futures::future::BoxFuture;
 use futures::Future;
-use crate::codec::Message;
 
 pub trait Publisher<State>: Send + Sync + 'static {
     type Fut: Future<Output = Message> + Send + 'static;
@@ -32,7 +32,7 @@ pub trait Publisher<State>: Send + Sync + 'static {
 
 //pub(crate) type DynPublisher = dyn (Fn() -> BoxFuture<'static, Message>) + Send + Sync + 'static;
 
-impl<F: Send + Sync + 'static, Fut, State> Publisher<State>  for F
+impl<F: Send + Sync + 'static, Fut, State> Publisher<State> for F
 where
     F: Fn(State) -> Fut,
     Fut: Future + Send + Sync + 'static,
