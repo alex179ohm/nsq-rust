@@ -20,4 +20,4 @@ rustls = "0.16"
 
 [dev-dependencies]
 nsq-rust = { path = "./" }
-env_logger = "0.7.1"
+femme = "1.3.0"

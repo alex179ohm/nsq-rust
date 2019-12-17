@@ -1,23 +1,21 @@
 use async_std::task;
 use nsq_rust::prelude::*;
-use env_logger;
-use std::env;
+use std::error::Error;
+use femme;
+use log;
 
-async fn my_pub() -> Pub {
-    Pub::new("test".to_owned(), b"ciao".to_vec())
+async fn my_pub(_app: ()) -> Message {
+    Pub::new("test".to_owned(), b"ciao".to_vec()).into()
 }
 
-fn main() {
-    env::set_var("CARGO_LOG", "debug");
-    env_logger::init();
+fn main() -> Result<(), Box<dyn Error>> {
+    femme::start(log::LevelFilter::Debug)?;
     task::block_on(async {
         let config = Config::new();
         //let cafile = PathBuf::from("./tests/end.chain");
-        if let Err(e) = Client::new("localhost:4150", config, None, None)
-            .publish(my_pub())
-            .await
-        {
-            eprintln!("{:?}", e);
-        }
-    })
+        let res = Client::new("localhost:4150", config, None, None)
+            .publish(my_pub).await;
+        println!("{:?}", res);
+    });
+    Ok(())
 }

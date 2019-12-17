@@ -12,7 +12,7 @@
 //
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-//
+//ext install TabNine.tabnine-vscode
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -40,13 +40,13 @@ use std::{
 
 const HEADER_SIZE: usize = 8;
 
-pub struct NsqIO<'a, S: AsyncRead + AsyncWrite + Unpin> {
+pub struct NsqIO<'a, S> {
     stream: &'a mut S,
     read_buffer: BytesMut,
     exit: bool,
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqIO<'a, S> {
+impl<'a, S> NsqIO<'a, S> {
     pub fn new(stream: &'a mut S, max_size: usize) -> Self {
         Self {
             stream,
@@ -60,7 +60,7 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> NsqIO<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqIO<'a, S> {
+impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
     type Item = NsqResult<Msg>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -91,8 +91,6 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqIO<'a, S> {
                     return Poll::Pending;
                 }
                 let frame = BigEndian::read_u32(&this.read_buffer.split_to(8)[4..]);
-                println!("frame: {:?}", frame);
-                println!("buffer: {:?}", this.read_buffer);
                 match frame {
                     0 => {
                         this.exit = true;
@@ -121,7 +119,7 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> Stream for NsqIO<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
+impl<'a, S: AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
     fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_write(cx, buf)
@@ -138,7 +136,7 @@ impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + AsyncWrite + Unpin> AsyncRead for NsqIO<'a, S> {
+impl<'a, S: AsyncRead + Unpin> AsyncRead for NsqIO<'a, S> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

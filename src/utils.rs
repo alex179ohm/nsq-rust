@@ -21,19 +21,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Auth, Encoder, Identify, Magic, Rdy, Sub};
+use crate::codec::{Auth, Identify, Magic, Rdy, Sub, Message};
 use crate::config::Config;
 use crate::error::NsqError;
 use crate::msg::Msg;
 use crate::result::NsqResult;
 use async_std::io::prelude::*;
 use async_std::stream::StreamExt;
-use bytes::BytesMut;
 use futures::Stream;
 
-pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO, buf: &mut BytesMut) -> NsqResult<()> {
-    Magic {}.encode(buf);
-    if let Err(e) = io.write_all(&buf.take()[..]).await {
+pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO) -> NsqResult<()> {
+    let buf: Message = Magic {}.into();
+    if let Err(e) = io.write_all(&buf.as_bytes_mut()).await {
         return Err(NsqError::from(e));
     };
     Ok(())
@@ -42,12 +41,10 @@ pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO, buf: &mut BytesMut) ->
 pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Msg>> + Unpin>(
     io: &mut IO,
     config: Config,
-    buf: &mut BytesMut,
 ) -> NsqResult<Msg> {
-    if let Ok(msg_string) = serde_json::to_string(&config) {
-        Identify::new(msg_string.as_str()).encode(buf);
-    };
-    if let Err(e) = io.write_all(&buf.take()[..]).await {
+    let msg_string = serde_json::to_string(&config)?; 
+    let buf: Message = Identify::new(msg_string.as_str()).into();
+    if let Err(e) = io.write_all(buf.as_bytes_mut()).await {
         return Err(NsqError::from(e));
     };
     io.next().await.unwrap()
@@ -56,14 +53,13 @@ pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Msg>> + Unpin>(
 pub(crate) async fn auth<IO, AUTH>(
     io: &mut IO,
     auth: AUTH,
-    buf: &mut BytesMut,
 ) -> NsqResult<Msg>
 where
     IO: Write + Stream<Item = NsqResult<Msg>> + Unpin,
     AUTH: Into<String>,
 {
-    Auth::new(auth.into().as_str()).encode(buf);
-    if let Err(e) = io.write_all(&buf.take()[..]).await {
+    let buf: Message = Auth::new(auth.into().as_str()).into();
+    if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
         return Err(NsqError::from(e));
     };
     io.next().await.unwrap()
@@ -71,7 +67,6 @@ where
 
 pub(crate) async fn sub<IO, CHANNEL, TOPIC>(
     io: &mut IO,
-    buf: &mut BytesMut,
     channel: CHANNEL,
     topic: TOPIC,
 ) -> NsqResult<Msg>
@@ -80,8 +75,8 @@ where
     CHANNEL: Into<String>,
     TOPIC: Into<String>,
 {
-    Sub::new(&channel.into(), &topic.into()).encode(buf);
-    if let Err(e) = io.write_all(&buf.take()[..]).await {
+    let buf: Message = Sub::new(&channel.into(), &topic.into()).into();
+    if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
         return Err(NsqError::from(e));
     }
     io.next().await.unwrap()
@@ -89,12 +84,21 @@ where
 
 pub(crate) async fn rdy<IO: Write + Unpin>(
     io: &mut IO,
-    buf: &mut BytesMut,
     rdy: u32,
 ) -> NsqResult<()> {
-    Rdy::new(&rdy.to_string()).encode(buf);
-    if let Err(e) = io.write_all(&buf.take()[..]).await {
+    let buf: Message = Rdy::new(&rdy.to_string()).into();
+    if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
         return Err(NsqError::from(e));
     }
     Ok(())
+}
+
+pub async fn io_publish<S>(io: &mut S, msg: Message) -> NsqResult<Msg>
+where
+    S: Write + Stream<Item = NsqResult<Msg>> + Unpin,
+{
+    if let Err(e) = io.write_all(&msg.as_bytes_mut()[..]).await {
+        return Err(NsqError::from(e));
+    }
+    io.next().await.unwrap()
 }

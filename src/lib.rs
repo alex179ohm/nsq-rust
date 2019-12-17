@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 // MIT License
 //
 // Copyright (c) 2019 Alessandro Cresto Miseroglio <alex179ohm@gmail.com>
@@ -27,15 +28,15 @@ mod codec;
 mod config;
 mod error;
 mod io;
-mod publish;
 mod msg;
 mod result;
 mod utils;
 mod consumer;
+mod publisher;
 mod cmd;
 
 pub mod prelude {
     pub use crate::client::Client;
-    pub use crate::codec::{Dpub, Mpub, Pub, Touch, Req, Fin, Cls};
+    pub use crate::codec::{Dpub, Mpub, Pub, Touch, Req, Fin, Cls, Message};
     pub use crate::config::Config;
 }

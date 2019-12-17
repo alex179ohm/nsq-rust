@@ -46,3 +46,22 @@ where
     }
 }
 
+pub trait TopicConsumer: Send + Sync + 'static {
+    type Fut: Future<Output = Cmd> + Send + 'static;
+    fn call(&self, topic: String, channel: String, cx: Msg) -> Self::Fut;
+}
+
+//pub(crate) type DynTopicConsumer = dyn (Fn(String, String, Msg) -> BoxFuture<'static, Cmd>) + Send + Sync + 'static;
+
+impl<F: Send + Sync + 'static, Fut> TopicConsumer for F
+where
+    F: Fn(String, String, Msg) -> Fut,
+    Fut: Future + Send + Sync + 'static,
+    Fut::Output: Into<Cmd>,
+{
+    type Fut = BoxFuture<'static, Cmd>;
+    fn call(&self, topic: String, channel: String, cx: Msg) -> Self::Fut {
+        let fut = (self)(topic, channel, cx);
+        Box::pin(async move { fut.await.into() })
+    }
+}

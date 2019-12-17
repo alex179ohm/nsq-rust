@@ -21,20 +21,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::error::NsqError;
-use crate::msg::Msg;
-use crate::result::NsqResult;
-use async_std::stream::StreamExt;
-use bytes::BytesMut;
-use futures::io::{AsyncWrite, AsyncWriteExt};
-use futures::Stream;
+use futures::future::BoxFuture;
+use futures::Future;
+use crate::codec::Message;
 
-pub async fn io_pub<S>(io: &mut S, buf: &mut BytesMut) -> NsqResult<Msg>
+pub trait Publisher<State>: Send + Sync + 'static {
+    type Fut: Future<Output = Message> + Send + 'static;
+    fn call(&self, s: State) -> Self::Fut;
+}
+
+//pub(crate) type DynPublisher = dyn (Fn() -> BoxFuture<'static, Message>) + Send + Sync + 'static;
+
+impl<F: Send + Sync + 'static, Fut, State> Publisher<State>  for F
 where
-    S: AsyncWrite + Stream<Item = NsqResult<Msg>> + Unpin,
+    F: Fn(State) -> Fut,
+    Fut: Future + Send + Sync + 'static,
+    Fut::Output: Into<Message>,
 {
-    if let Err(e) = io.write_all(&buf.take()[..]).await {
-        return Err(NsqError::from(e));
+    type Fut = BoxFuture<'static, Message>;
+    fn call(&self, s: State) -> Self::Fut {
+        let fut = (self)(s);
+        Box::pin(async move { fut.await.into() })
     }
-    io.next().await.unwrap()
 }

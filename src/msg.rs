@@ -22,8 +22,6 @@
 // SOFTWARE.
 
 //use crate::msg::Msg;
-use crate::codec::{decode_msg, Decoder, Message};
-use bytes::BytesMut;
 use std::fmt;
 
 pub enum Msg {
@@ -63,13 +61,5 @@ impl fmt::Debug for Msg {
             ),
             Json(s) => write!(f, "{:?}", s),
         }
-    }
-}
-
-impl Message for Msg {}
-
-impl Decoder<Msg> for Msg {
-    fn decode(buf: &mut BytesMut) -> Msg {
-        Msg::Msg(decode_msg(buf.as_mut()))
     }
 }
