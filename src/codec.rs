@@ -116,8 +116,7 @@ impl From<Sub<'_>> for Message {
     fn from(sub: Sub<'_>) -> Self {
         let len = sub.0.len();
         let mut buf = BytesMut::with_capacity(6 + len);
-        buf.put(&b"SUB "[..]);
-        buf.put(&[sub.0.as_bytes(), &b" "[..], sub.1.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"SUB "[..], sub.0.as_bytes(), &b" "[..], sub.1.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -133,8 +132,7 @@ impl<'a> Rdy<'a> {
 impl From<Rdy<'_>> for Message {
     fn from(rdy: Rdy<'_>) -> Self {
         let mut buf = BytesMut::with_capacity(5 + rdy.0.len());
-        buf.put(&b"RDY "[..]);
-        buf.put(&[rdy.0.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"RDY "[..], rdy.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -152,8 +150,7 @@ impl From<Pub> for Message {
         let msg_len = pb.1.len();
         let len = pb.0.len() + msg_len;
         let mut buf = BytesMut::with_capacity(9 + len);
-        buf.put(&b"PUB "[..]);
-        buf.put(&[pb.0.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"PUB "[..], pb.0.as_bytes(), &b"\n"[..]].concat());
         buf.put_u32_be(msg_len as u32);
         buf.put(pb.1.as_slice());
         Message(buf)
@@ -174,8 +171,7 @@ impl From<Mpub> for Message {
         let total_msgs_len = mpub.1.iter().fold(0, |acc, e| acc + e.len() + 4);
         let len = mpub.0.len();
         let mut buf = BytesMut::with_capacity(14 + len + total_msgs_len);
-        buf.put(&b"MPUB "[..]);
-        buf.put(&[mpub.0.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"MPUB "[..], mpub.0.as_bytes(), &b"\n"[..]].concat());
         buf.put_u32_be(total_msgs_len as u32);
         buf.put_u32_be(num_msgs as u32);
         for msg in mpub.1 {
@@ -199,8 +195,7 @@ impl From<Dpub> for Message {
         let msg_len = msg.2.len();
         let len = msg.0.len() + msg.1.len() + msg_len;
         let mut buf = BytesMut::with_capacity(11 + len);
-        buf.put(&b"DPUB "[..]);
-        buf.put(&[msg.0.as_bytes(), &b" "[..], msg.1.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"DPUB "[..], msg.0.as_bytes(), &b" "[..], msg.1.as_bytes(), &b"\n"[..]].concat());
         buf.put_u32_be(msg_len as u32);
         buf.put(msg.2.as_slice());
         Message(buf)
@@ -218,8 +213,7 @@ impl Touch {
 impl From<Touch> for Message {
     fn from(touch: Touch) -> Self {
         let mut buf = BytesMut::with_capacity(touch.0.len() + 7);
-        buf.put(&b"TOUCH "[..]);
-        buf.put(&[touch.0.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"TOUCH "[..], touch.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -235,9 +229,7 @@ impl Fin {
 impl From<Fin> for Message {
     fn from(fin: Fin) -> Self {
         let mut buf = BytesMut::with_capacity(fin.0.len() + 5);
-        let bytes = [fin.0.as_bytes(), &b"\n"[..]].concat();
-        buf.put(&b"FIN "[..]);
-        buf.put(&bytes);
+        buf.put(&[&b"FIN "[..], fin.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -253,8 +245,7 @@ impl Req {
 impl From<Req> for Message {
     fn from(req: Req) -> Self {
         let mut buf = BytesMut::with_capacity(req.0.len() + req.1.len() + 6);
-        buf.put(&b"REQ "[..]);
-        buf.put(&[req.0.as_bytes(), &b" "[..], req.1.as_bytes(), &b"\n"[..]].concat());
+        buf.put(&[&b"REQ "[..], req.0.as_bytes(), &b" "[..], req.1.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
