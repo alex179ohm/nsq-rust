@@ -29,6 +29,18 @@ use byteorder::{BigEndian, ByteOrder};
 pub struct Message(BytesMut);
 
 impl Message {
+    #[allow(dead_code)]
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[allow(dead_code)]
+    fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
+}
+
+impl Message {
     pub fn as_bytes_mut(&self) -> &BytesMut {
         &self.0
     }
@@ -38,8 +50,18 @@ pub struct Magic;
 
 impl From<Magic> for Message {
     fn from(_: Magic) -> Self {
-        let mut buf = BytesMut::with_capacity(4);
+        let mut buf = BytesMut::new();
         buf.put(&b"  V2"[..]);
+        Message(buf)
+    }
+}
+
+pub struct Nop;
+
+impl From<Nop> for Message {
+    fn from(_: Nop) -> Self {
+        let mut buf = BytesMut::new();
+        buf.put(&b"NOP\n"[..]);
         Message(buf)
     }
 }
@@ -95,10 +117,7 @@ impl From<Sub<'_>> for Message {
         let len = sub.0.len();
         let mut buf = BytesMut::with_capacity(6 + len);
         buf.put(&b"SUB "[..]);
-        buf.put(sub.0.as_bytes());
-        buf.put(&b" "[..]);
-        buf.put(sub.1.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[sub.0.as_bytes(), &b" "[..], sub.1.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -115,8 +134,7 @@ impl From<Rdy<'_>> for Message {
     fn from(rdy: Rdy<'_>) -> Self {
         let mut buf = BytesMut::with_capacity(5 + rdy.0.len());
         buf.put(&b"RDY "[..]);
-        buf.put(rdy.0.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[rdy.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -135,8 +153,7 @@ impl From<Pub> for Message {
         let len = pb.0.len() + msg_len;
         let mut buf = BytesMut::with_capacity(9 + len);
         buf.put(&b"PUB "[..]);
-        buf.put(pb.0.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[pb.0.as_bytes(), &b"\n"[..]].concat());
         buf.put_u32_be(msg_len as u32);
         buf.put(pb.1.as_slice());
         Message(buf)
@@ -158,8 +175,7 @@ impl From<Mpub> for Message {
         let len = mpub.0.len();
         let mut buf = BytesMut::with_capacity(14 + len + total_msgs_len);
         buf.put(&b"MPUB "[..]);
-        buf.put(mpub.0.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[mpub.0.as_bytes(), &b"\n"[..]].concat());
         buf.put_u32_be(total_msgs_len as u32);
         buf.put_u32_be(num_msgs as u32);
         for msg in mpub.1 {
@@ -184,10 +200,7 @@ impl From<Dpub> for Message {
         let len = msg.0.len() + msg.1.len() + msg_len;
         let mut buf = BytesMut::with_capacity(11 + len);
         buf.put(&b"DPUB "[..]);
-        buf.put(msg.0.as_bytes());
-        buf.put(&b" "[..]);
-        buf.put(msg.1.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[msg.0.as_bytes(), &b" "[..], msg.1.as_bytes(), &b"\n"[..]].concat());
         buf.put_u32_be(msg_len as u32);
         buf.put(msg.2.as_slice());
         Message(buf)
@@ -206,8 +219,7 @@ impl From<Touch> for Message {
     fn from(touch: Touch) -> Self {
         let mut buf = BytesMut::with_capacity(touch.0.len() + 7);
         buf.put(&b"TOUCH "[..]);
-        buf.put(touch.0.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[touch.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -223,9 +235,9 @@ impl Fin {
 impl From<Fin> for Message {
     fn from(fin: Fin) -> Self {
         let mut buf = BytesMut::with_capacity(fin.0.len() + 5);
+        let bytes = [fin.0.as_bytes(), &b"\n"[..]].concat();
         buf.put(&b"FIN "[..]);
-        buf.put(fin.0.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&bytes);
         Message(buf)
     }
 }
@@ -242,10 +254,7 @@ impl From<Req> for Message {
     fn from(req: Req) -> Self {
         let mut buf = BytesMut::with_capacity(req.0.len() + req.1.len() + 6);
         buf.put(&b"REQ "[..]);
-        buf.put(req.0.as_bytes());
-        buf.put(&b" "[..]);
-        buf.put(req.1.as_bytes());
-        buf.put(&b"\n"[..]);
+        buf.put(&[req.0.as_bytes(), &b" "[..], req.1.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -254,7 +263,7 @@ pub struct Cls;
 
 impl From<Cls> for Message {
     fn from(_: Cls) -> Self {
-        let mut buf = BytesMut::with_capacity(4);
+        let mut buf = BytesMut::new();
         buf.put(&b"CLS\n"[..]);
         Message(buf)
     }

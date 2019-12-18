@@ -89,7 +89,6 @@ impl<State> Client<State> {
     }
 }
 
-impl Client<()> {}
 
 impl<State> Client<State> {
     pub async fn consumer<CHANNEL, TOPIC>(

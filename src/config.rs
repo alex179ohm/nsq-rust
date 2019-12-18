@@ -23,7 +23,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Configuration sent to nsqd to properly config the [Connection](struct.Connection.html)
+/// Configuration sent to nsqd to properly config the [Client](struct.Client.html) Connection
 ///
 /// # Examples
 ///```no-run
@@ -39,7 +39,6 @@ use serde::{Deserialize, Serialize};
 ///     None,
 /// );
 ///```
-///
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
     /// Identifiers sent to nsqd representing this client (consumer specific)
