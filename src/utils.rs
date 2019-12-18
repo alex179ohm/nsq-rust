@@ -32,7 +32,7 @@ use futures::Stream;
 
 pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO) -> NsqResult<()> {
     let buf: Message = Magic {}.into();
-    if let Err(e) = io.write_all(&buf.as_bytes_mut()).await {
+    if let Err(e) = io.write_all(buf.as_slice()).await {
         return Err(NsqError::from(e));
     };
     Ok(())
@@ -44,7 +44,7 @@ pub(crate) async fn identify<IO: Write + Stream<Item = NsqResult<Msg>> + Unpin>(
 ) -> NsqResult<Msg> {
     let msg_string = serde_json::to_string(&config)?;
     let buf: Message = Identify::new(msg_string.as_str()).into();
-    if let Err(e) = io.write_all(buf.as_bytes_mut()).await {
+    if let Err(e) = io.write_all(buf.as_slice()).await {
         return Err(NsqError::from(e));
     };
     io.next().await.unwrap()
@@ -56,7 +56,7 @@ where
     AUTH: Into<String>,
 {
     let buf: Message = Auth::new(auth.into().as_str()).into();
-    if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
+    if let Err(e) = io.write_all(buf.as_slice()).await {
         return Err(NsqError::from(e));
     };
     io.next().await.unwrap()
@@ -73,7 +73,7 @@ where
     TOPIC: Into<String>,
 {
     let buf: Message = Sub::new(&channel.into(), &topic.into()).into();
-    if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
+    if let Err(e) = io.write_all(buf.as_slice()).await {
         return Err(NsqError::from(e));
     }
     io.next().await.unwrap()
@@ -81,7 +81,7 @@ where
 
 pub(crate) async fn rdy<IO: Write + Unpin>(io: &mut IO, rdy: u32) -> NsqResult<()> {
     let buf: Message = Rdy::new(&rdy.to_string()).into();
-    if let Err(e) = io.write_all(&buf.as_bytes_mut()[..]).await {
+    if let Err(e) = io.write_all(buf.as_slice()).await {
         return Err(NsqError::from(e));
     }
     Ok(())
@@ -91,7 +91,7 @@ pub async fn io_publish<S>(io: &mut S, msg: Message) -> NsqResult<Msg>
 where
     S: Write + Stream<Item = NsqResult<Msg>> + Unpin,
 {
-    if let Err(e) = io.write_all(&msg.as_bytes_mut()[..]).await {
+    if let Err(e) = io.write_all(msg.as_slice()).await {
         return Err(NsqError::from(e));
     }
     io.next().await.unwrap()

@@ -21,28 +21,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use bytes::{BufMut, BytesMut};
 use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 
-pub struct Message(BytesMut);
+pub struct Message(Vec<u8>);
 
 impl Message {
-    #[allow(dead_code)]
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[allow(dead_code)]
-    fn capacity(&self) -> usize {
-        self.0.capacity()
-    }
-}
-
-impl Message {
-    pub fn as_bytes_mut(&self) -> &BytesMut {
-        &self.0
+    pub fn as_slice(&self) -> &[u8] {
+        self.0.as_slice()
     }
 }
 
@@ -50,9 +37,7 @@ pub struct Magic;
 
 impl From<Magic> for Message {
     fn from(_: Magic) -> Self {
-        let mut buf = BytesMut::new();
-        buf.put(&b"  V2"[..]);
-        Message(buf)
+        Message(Vec::from(&b"  V2"[..]))
     }
 }
 
@@ -60,9 +45,7 @@ pub struct Nop;
 
 impl From<Nop> for Message {
     fn from(_: Nop) -> Self {
-        let mut buf = BytesMut::new();
-        buf.put(&b"NOP\n"[..]);
-        Message(buf)
+        Message(Vec::from(&b"NOP\n"[..]))
     }
 }
 
@@ -77,10 +60,10 @@ impl<'a> Identify<'a> {
 impl From<Identify<'_>> for Message {
     fn from(id: Identify<'_>) -> Self {
         let len = id.0.len();
-        let mut buf = BytesMut::with_capacity(13 + len);
-        buf.put(&b"IDENTIFY\n"[..]);
-        buf.put_u32_be(len as u32);
-        buf.put(id.0.as_bytes());
+        let mut buf = Vec::with_capacity(13 + len);
+        buf.extend_from_slice(&b"IDENTIFY\n"[..]);
+        buf.extend_from_slice(&(len as u32).to_be_bytes());
+        buf.extend_from_slice(id.0.as_bytes());
         Message(buf)
     }
 }
@@ -96,10 +79,10 @@ impl<'a> Auth<'a> {
 impl From<Auth<'_>> for Message {
     fn from(auth: Auth<'_>) -> Self {
         let len = auth.0.len();
-        let mut buf = BytesMut::with_capacity(9 + len);
-        buf.put(&b"AUTH\n"[..]);
-        buf.put_u32_be(len as u32);
-        buf.put(auth.0.as_bytes());
+        let mut buf = Vec::with_capacity(9 + len);
+        buf.extend_from_slice(&b"AUTH\n"[..]);
+        buf.extend_from_slice(&(len as u32).to_be_bytes());
+        buf.extend_from_slice(auth.0.as_bytes());
         Message(buf)
     }
 }
@@ -115,8 +98,8 @@ impl<'a> Sub<'a> {
 impl From<Sub<'_>> for Message {
     fn from(sub: Sub<'_>) -> Self {
         let len = sub.0.len();
-        let mut buf = BytesMut::with_capacity(6 + len);
-        buf.put(&[&b"SUB "[..], sub.0.as_bytes(), &b" "[..], sub.1.as_bytes(), &b"\n"[..]].concat());
+        let mut buf = Vec::with_capacity(6 + len);
+        buf.extend_from_slice(&[&b"SUB "[..], sub.0.as_bytes(), &b" "[..], sub.1.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -131,8 +114,8 @@ impl<'a> Rdy<'a> {
 
 impl From<Rdy<'_>> for Message {
     fn from(rdy: Rdy<'_>) -> Self {
-        let mut buf = BytesMut::with_capacity(5 + rdy.0.len());
-        buf.put(&[&b"RDY "[..], rdy.0.as_bytes(), &b"\n"[..]].concat());
+        let mut buf = Vec::with_capacity(5 + rdy.0.len());
+        buf.extend_from_slice(&[&b"RDY "[..], rdy.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -149,10 +132,10 @@ impl From<Pub> for Message {
     fn from(pb: Pub) -> Self {
         let msg_len = pb.1.len();
         let len = pb.0.len() + msg_len;
-        let mut buf = BytesMut::with_capacity(9 + len);
-        buf.put(&[&b"PUB "[..], pb.0.as_bytes(), &b"\n"[..]].concat());
-        buf.put_u32_be(msg_len as u32);
-        buf.put(pb.1.as_slice());
+        let mut buf = Vec::with_capacity(9 + len);
+        buf.extend_from_slice(&[&b"PUB "[..], pb.0.as_bytes(), &b"\n"[..]].concat());
+        buf.extend_from_slice(&(msg_len as u32).to_be_bytes());
+        buf.extend_from_slice(pb.1.as_slice());
         Message(buf)
     }
 }
@@ -170,13 +153,13 @@ impl From<Mpub> for Message {
         let num_msgs = mpub.1.len();
         let total_msgs_len = mpub.1.iter().fold(0, |acc, e| acc + e.len() + 4);
         let len = mpub.0.len();
-        let mut buf = BytesMut::with_capacity(14 + len + total_msgs_len);
-        buf.put(&[&b"MPUB "[..], mpub.0.as_bytes(), &b"\n"[..]].concat());
-        buf.put_u32_be(total_msgs_len as u32);
-        buf.put_u32_be(num_msgs as u32);
+        let mut buf = Vec::with_capacity(14 + len + total_msgs_len);
+        buf.extend_from_slice(&[&b"MPUB "[..], mpub.0.as_bytes(), &b"\n"[..]].concat());
+        buf.extend_from_slice(&(total_msgs_len as u32).to_be_bytes());
+        buf.extend_from_slice(&(num_msgs as u32).to_be_bytes());
         for msg in mpub.1 {
-            buf.put_u32_be(msg.len() as u32);
-            buf.put(msg);
+            buf.extend_from_slice(&(msg.len() as u32).to_be_bytes());
+            buf.extend_from_slice(msg.as_slice());
         }
         Message(buf)
     }
@@ -194,10 +177,10 @@ impl From<Dpub> for Message {
     fn from(msg: Dpub) -> Self {
         let msg_len = msg.2.len();
         let len = msg.0.len() + msg.1.len() + msg_len;
-        let mut buf = BytesMut::with_capacity(11 + len);
-        buf.put(&[&b"DPUB "[..], msg.0.as_bytes(), &b" "[..], msg.1.as_bytes(), &b"\n"[..]].concat());
-        buf.put_u32_be(msg_len as u32);
-        buf.put(msg.2.as_slice());
+        let mut buf = Vec::with_capacity(11 + len);
+        buf.extend_from_slice(&[&b"DPUB "[..], msg.0.as_bytes(), &b" "[..], msg.1.as_bytes(), &b"\n"[..]].concat());
+        buf.extend_from_slice(&(msg_len as u32).to_be_bytes());
+        buf.extend_from_slice(msg.2.as_slice());
         Message(buf)
     }
 }
@@ -212,8 +195,8 @@ impl Touch {
 
 impl From<Touch> for Message {
     fn from(touch: Touch) -> Self {
-        let mut buf = BytesMut::with_capacity(touch.0.len() + 7);
-        buf.put(&[&b"TOUCH "[..], touch.0.as_bytes(), &b"\n"[..]].concat());
+        let mut buf = Vec::with_capacity(touch.0.len() + 7);
+        buf.extend_from_slice(&[&b"TOUCH "[..], touch.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -228,8 +211,8 @@ impl Fin {
 
 impl From<Fin> for Message {
     fn from(fin: Fin) -> Self {
-        let mut buf = BytesMut::with_capacity(fin.0.len() + 5);
-        buf.put(&[&b"FIN "[..], fin.0.as_bytes(), &b"\n"[..]].concat());
+        let mut buf = Vec::with_capacity(fin.0.len() + 5);
+        buf.extend_from_slice(&[&b"FIN "[..], fin.0.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -244,8 +227,8 @@ impl Req {
 
 impl From<Req> for Message {
     fn from(req: Req) -> Self {
-        let mut buf = BytesMut::with_capacity(req.0.len() + req.1.len() + 6);
-        buf.put(&[&b"REQ "[..], req.0.as_bytes(), &b" "[..], req.1.as_bytes(), &b"\n"[..]].concat());
+        let mut buf = Vec::with_capacity(req.0.len() + req.1.len() + 6);
+        buf.extend_from_slice(&[&b"REQ "[..], req.0.as_bytes(), &b" "[..], req.1.as_bytes(), &b"\n"[..]].concat());
         Message(buf)
     }
 }
@@ -254,9 +237,7 @@ pub struct Cls;
 
 impl From<Cls> for Message {
     fn from(_: Cls) -> Self {
-        let mut buf = BytesMut::new();
-        buf.put(&b"CLS\n"[..]);
-        Message(buf)
+        Message(Vec::from(&b"CLS\n"[..]))
     }
 }
 
