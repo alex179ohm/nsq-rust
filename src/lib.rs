@@ -23,7 +23,7 @@
 // SOFTWARE.
 mod auth;
 mod client;
-mod cmd;
+//mod cmd;
 mod codec;
 mod config;
 mod consumer;

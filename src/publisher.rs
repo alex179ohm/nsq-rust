@@ -30,8 +30,6 @@ pub trait Publisher<State>: Send + Sync + 'static {
     fn call(&self, s: State) -> Self::Fut;
 }
 
-//pub(crate) type DynPublisher = dyn (Fn() -> BoxFuture<'static, Message>) + Send + Sync + 'static;
-
 impl<F: Send + Sync + 'static, Fut, State> Publisher<State> for F
 where
     F: Fn(State) -> Fut,

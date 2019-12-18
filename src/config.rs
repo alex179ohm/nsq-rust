@@ -27,19 +27,17 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Examples
 ///```no-run
-/// use nsq_client::{Connection, Config};
+/// use nsq_client::{Client, Config};
 ///
-/// let sys = System::new("consumer");
 /// let config = Config::new().client_id("consumer").user_agent("node-1");
-/// Supervisor::start(|_| Connection::new(
+/// Client::new(
 ///     "test",
 ///     "test",
 ///     "0.0.0.0:4150",
 ///     Some(config),
 ///     None,
 ///     None,
-/// ));
-/// sys.run();
+/// );
 ///```
 ///
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

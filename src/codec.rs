@@ -34,18 +34,7 @@ impl Message {
     }
 }
 
-/// The Encoder trait allow to encode different kind of commands into the BytesMut buffer.
-pub trait Encoder {
-    fn encode(self, buf: &mut BytesMut);
-}
-
 pub struct Magic;
-
-impl Encoder for Magic {
-    fn encode(self, buf: &mut BytesMut) {
-        buf.put(&b"  V2"[..]);
-    }
-}
 
 impl From<Magic> for Message {
     fn from(_: Magic) -> Self {
@@ -74,16 +63,6 @@ impl From<Identify<'_>> for Message {
     }
 }
 
-impl<'a> Encoder for Identify<'a> {
-    fn encode(self, buf: &mut BytesMut) {
-        let len = self.0.len();
-        check_and_reserve(buf, 13 + len);
-        buf.put(&b"IDENTIFY\n"[..]);
-        buf.put_u32_be(len as u32);
-        buf.put(self.0.as_bytes());
-    }
-}
-
 pub struct Auth<'a>(&'a str);
 
 impl<'a> Auth<'a> {
@@ -100,16 +79,6 @@ impl From<Auth<'_>> for Message {
         buf.put_u32_be(len as u32);
         buf.put(auth.0.as_bytes());
         Message(buf)
-    }
-}
-
-impl<'a> Encoder for Auth<'a> {
-    fn encode(self, buf: &mut BytesMut) {
-        let len = self.0.len();
-        check_and_reserve(buf, 9 + len);
-        buf.put(&b"AUTH\n"[..]);
-        buf.put_u32_be(len as u32);
-        buf.put(self.0.as_bytes());
     }
 }
 
@@ -134,18 +103,6 @@ impl From<Sub<'_>> for Message {
     }
 }
 
-impl<'a> Encoder for Sub<'a> {
-    fn encode(self, buf: &mut BytesMut) {
-        let len = self.0.len() + self.1.len();
-        check_and_reserve(buf, 6 + len);
-        buf.put(&b"SUB "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b" "[..]);
-        buf.put(self.1.as_bytes());
-        buf.put(&b"\n"[..]);
-    }
-}
-
 pub struct Rdy<'a>(&'a str);
 
 impl<'a> Rdy<'a> {
@@ -161,15 +118,6 @@ impl From<Rdy<'_>> for Message {
         buf.put(rdy.0.as_bytes());
         buf.put(&b"\n"[..]);
         Message(buf)
-    }
-}
-
-impl Encoder for Rdy<'_> {
-    fn encode(self, buf: &mut BytesMut) {
-        check_and_reserve(buf, self.0.len() + 5);
-        buf.put(&b"RDY "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b"\n"[..]);
     }
 }
 
@@ -192,19 +140,6 @@ impl From<Pub> for Message {
         buf.put_u32_be(msg_len as u32);
         buf.put(pb.1.as_slice());
         Message(buf)
-    }
-}
-
-impl Encoder for Pub {
-    fn encode(self, buf: &mut BytesMut) {
-        let msg_len = self.1.len();
-        let len = self.0.len() + msg_len;
-        check_and_reserve(buf, 9 + len);
-        buf.put(&b"PUB "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b"\n"[..]);
-        buf.put_u32_be(msg_len as u32);
-        buf.put(self.1.as_slice());
     }
 }
 
@@ -235,24 +170,6 @@ impl From<Mpub> for Message {
     }
 }
 
-impl Encoder for Mpub {
-    fn encode(self, buf: &mut BytesMut) {
-        let num_msgs = self.1.len();
-        let total_msgs_len = self.1.iter().fold(0, |acc, e| acc + e.len() + 4);
-        let len = self.0.len();
-        check_and_reserve(buf, 14 + len + total_msgs_len);
-        buf.put(&b"MPUB "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b"\n"[..]);
-        buf.put_u32_be(total_msgs_len as u32);
-        buf.put_u32_be(num_msgs as u32);
-        for msg in self.1 {
-            buf.put_u32_be(msg.len() as u32);
-            buf.put(msg);
-        }
-    }
-}
-
 pub struct Dpub(String, String, Vec<u8>);
 
 impl Dpub {
@@ -277,21 +194,6 @@ impl From<Dpub> for Message {
     }
 }
 
-impl Encoder for Dpub {
-    fn encode(self, buf: &mut BytesMut) {
-        let msg_len = self.2.len();
-        let len = self.0.len() + self.1.len() + msg_len;
-        check_and_reserve(buf, 11 + len);
-        buf.put(&b"DPUB "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b" "[..]);
-        buf.put(self.1.as_bytes());
-        buf.put(&b"\n"[..]);
-        buf.put_u32_be(msg_len as u32);
-        buf.put(self.2.as_slice());
-    }
-}
-
 pub struct Touch(String);
 
 impl Touch {
@@ -310,15 +212,6 @@ impl From<Touch> for Message {
     }
 }
 
-impl Encoder for Touch {
-    fn encode(self, buf: &mut BytesMut) {
-        check_and_reserve(buf, self.0.len() + 7);
-        buf.put(&b"TOUCH "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b"\n"[..]);
-    }
-}
-
 pub struct Fin(String);
 
 impl Fin {
@@ -334,15 +227,6 @@ impl From<Fin> for Message {
         buf.put(fin.0.as_bytes());
         buf.put(&b"\n"[..]);
         Message(buf)
-    }
-}
-
-impl Encoder for Fin {
-    fn encode(self, buf: &mut BytesMut) {
-        check_and_reserve(buf, self.0.len() + 5);
-        buf.put(&b"FIN "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b"\n"[..]);
     }
 }
 
@@ -366,17 +250,6 @@ impl From<Req> for Message {
     }
 }
 
-impl Encoder for Req {
-    fn encode(self, buf: &mut BytesMut) {
-        check_and_reserve(buf, self.0.len() + self.1.len() + 6);
-        buf.put(&b"REQ "[..]);
-        buf.put(self.0.as_bytes());
-        buf.put(&b" "[..]);
-        buf.put(self.1.as_bytes());
-        buf.put(&b"\n"[..]);
-    }
-}
-
 pub struct Cls;
 
 impl From<Cls> for Message {
@@ -387,13 +260,6 @@ impl From<Cls> for Message {
     }
 }
 
-impl Encoder for Cls {
-    fn encode(self, buf: &mut BytesMut) {
-        check_and_reserve(buf, 4);
-        buf.put(&b"CLS\n"[..]);
-    }
-}
-
 pub fn decode_msg(buf: &mut [u8]) -> (i64, u16, String, Vec<u8>) {
     // skip size and frame type
     let timestamp = BigEndian::read_i64(&buf[..8]);
@@ -401,10 +267,4 @@ pub fn decode_msg(buf: &mut [u8]) -> (i64, u16, String, Vec<u8>) {
     let id_bytes = &buf[10..26];
     let id = str::from_utf8(id_bytes).expect("failed to decode id message");
     (timestamp, attemps, id.to_owned(), Vec::from(&buf[26..]))
-}
-
-fn check_and_reserve(buf: &mut BytesMut, size: usize) {
-    if buf.remaining_mut() < size {
-        buf.reserve(size);
-    }
 }

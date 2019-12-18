@@ -22,8 +22,8 @@
 // SOFTWARE.
 
 use crate::auth::AuthReply;
-use crate::codec::Message;
 use crate::config::{Config, NsqConfig};
+use crate::consumer::Consumer;
 use crate::error::NsqError;
 use crate::io::NsqIO;
 use crate::msg::Msg;
@@ -38,7 +38,6 @@ use futures::io::{AsyncRead, AsyncWrite};
 use log::debug;
 use rustls::ClientConfig;
 use std::fmt::{Debug, Display};
-use std::future::Future;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -93,16 +92,15 @@ impl<State> Client<State> {
 impl Client<()> {}
 
 impl<State> Client<State> {
-    pub async fn consumer<CHANNEL, TOPIC, F, T>(
+    pub async fn consumer<CHANNEL, TOPIC>(
         self,
         channel: CHANNEL,
         topic: TOPIC,
-        _future: F,
+        _future: impl Consumer<State>,
     ) -> NsqResult<()>
     where
         CHANNEL: Into<String> + Display + Copy,
         TOPIC: Into<String> + Display + Copy,
-        F: Future<Output = Message> + Send + Sync + 'static,
     {
         let mut tcp_stream = connect(self.addr.clone()).await?;
         if let Err(e) = utils::magic(&mut tcp_stream).await {
@@ -128,18 +126,17 @@ impl<State> Client<State> {
         }
     }
 
-    async fn consumer_tls<CHANNEL, TOPIC, F>(
+    async fn consumer_tls<CHANNEL, TOPIC>(
         self,
         config: NsqConfig,
         stream: &mut TcpStream,
         channel: CHANNEL,
         topic: TOPIC,
-        _future: F,
+        _future: impl Consumer<State>,
     ) -> NsqResult<()>
     where
         CHANNEL: Into<String> + Copy + Display,
         TOPIC: Into<String> + Copy + Display,
-        F: Future<Output = Message>,
     {
         let addr: Vec<&str> = self.addr.split(':').collect();
         let cafile = self.cafile;
@@ -169,19 +166,18 @@ impl<State> Client<State> {
         Ok(())
     }
 
-    async fn consumer_tcp<CHANNEL, TOPIC, S, F>(
+    async fn consumer_tcp<CHANNEL, TOPIC, S>(
         self,
         config: NsqConfig,
         stream: &mut NsqIO<'_, S>,
         channel: CHANNEL,
         topic: TOPIC,
-        _future: F,
+        _future: impl Consumer<State>,
     ) -> NsqResult<()>
     where
         CHANNEL: Into<String> + Display + Copy,
         TOPIC: Into<String> + Display + Copy,
         S: AsyncRead + AsyncWrite + Unpin,
-        F: Future<Output = Message>,
     {
         if config.auth_required && self.auth.is_some() {
             let auth_token = self.auth.unwrap();

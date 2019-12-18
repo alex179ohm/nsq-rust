@@ -21,47 +21,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::cmd::Cmd;
+use crate::codec::Message;
 use crate::msg::Msg;
 use futures::future::BoxFuture;
 use futures::Future;
 
-pub trait Consumer: Send + Sync + 'static {
-    type Fut: Future<Output = Cmd> + Send + 'static;
-    fn call(&self, cx: Msg) -> Self::Fut;
+pub trait Consumer<State>: Send + Sync + 'static {
+    type Fut: Future<Output = Message> + Send + 'static;
+    fn call(&self, state: State, cx: Msg) -> Self::Fut;
 }
 
-pub(crate) type DynConsumer = dyn (Fn(Msg) -> BoxFuture<'static, Cmd>) + Send + Sync + 'static;
+//pub(crate) type DynConsumer = dyn (Fn(Msg) -> BoxFuture<'static, Message>) + Send + Sync + 'static;
 
-impl<F: Send + Sync + 'static, Fut> Consumer for F
+impl<F: Send + Sync + 'static, Fut, State> Consumer<State> for F
 where
-    F: Fn(Msg) -> Fut,
+    F: Fn(State, Msg) -> Fut,
     Fut: Future + Send + 'static,
-    Fut::Output: Into<Cmd>,
+    Fut::Output: Into<Message>,
 {
-    type Fut = BoxFuture<'static, Cmd>;
-    fn call(&self, cx: Msg) -> Self::Fut {
-        let fut = (self)(cx);
-        Box::pin(async move { fut.await.into() })
-    }
-}
-
-pub trait TopicConsumer: Send + Sync + 'static {
-    type Fut: Future<Output = Cmd> + Send + 'static;
-    fn call(&self, topic: String, channel: String, cx: Msg) -> Self::Fut;
-}
-
-//pub(crate) type DynTopicConsumer = dyn (Fn(String, String, Msg) -> BoxFuture<'static, Cmd>) + Send + Sync + 'static;
-
-impl<F: Send + Sync + 'static, Fut> TopicConsumer for F
-where
-    F: Fn(String, String, Msg) -> Fut,
-    Fut: Future + Send + Sync + 'static,
-    Fut::Output: Into<Cmd>,
-{
-    type Fut = BoxFuture<'static, Cmd>;
-    fn call(&self, topic: String, channel: String, cx: Msg) -> Self::Fut {
-        let fut = (self)(topic, channel, cx);
+    type Fut = BoxFuture<'static, Message>;
+    fn call(&self, state: State, cx: Msg) -> Self::Fut {
+        let fut = (self)(state, cx);
         Box::pin(async move { fut.await.into() })
     }
 }
