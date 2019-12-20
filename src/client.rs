@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::auth::AuthReply;
+use crate::auth;
 use crate::config::{Config, NsqConfig};
 use crate::consumer::Consumer;
 use crate::error::NsqError;
@@ -154,7 +154,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }
@@ -182,7 +182,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }
@@ -239,7 +239,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }
@@ -261,7 +261,7 @@ impl<State> Client<State> {
             let auth_token = self.auth.unwrap();
             stream.reset();
             if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-                let auth: AuthReply = serde_json::from_str(&s).expect("json deserialize error");
+                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
                 debug!("AUTH: {:?}", auth);
             }
         }

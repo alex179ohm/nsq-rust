@@ -1,4 +1,5 @@
 #[allow(dead_code)]
+#[warn(clippy::pedantic)]
 // MIT License
 //
 // Copyright (c) 2019 Alessandro Cresto Miseroglio <alex179ohm@gmail.com>
