@@ -32,6 +32,7 @@ mod io;
 mod msg;
 mod publisher;
 mod result;
+mod tcp;
 mod tls;
 mod utils;
 

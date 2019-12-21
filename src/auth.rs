@@ -21,14 +21,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use serde::{Deserialize, Serialize};
-use crate::result::NsqResult;
-use futures::{AsyncRead, AsyncWrite};
-use crate::utils;
 use crate::io::NsqIO;
 use crate::msg::Msg;
-use std::io;
+use crate::result::NsqResult;
+use crate::utils;
+use futures::{AsyncRead, AsyncWrite};
 use log::debug;
+use serde::{Deserialize, Serialize};
+use std::io;
 
 /// Authentication response sent by nsqd to the client after the AUTH command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -38,9 +38,16 @@ pub struct Reply {
     permission_count: i32,
 }
 
-pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(auth: Option<String>, stream: &mut NsqIO<'_, S>) -> NsqResult<()> {
+pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
+    auth: Option<String>,
+    stream: &mut NsqIO<'_, S>,
+) -> NsqResult<()> {
     if auth.is_none() {
-        return Err(io::Error::new(io::ErrorKind::Other, "When configured with auth, authentication token must be provided").into())
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "When configured with auth, authentication token must be provided",
+        )
+        .into());
     }
     let auth_token = auth.unwrap();
     stream.reset();

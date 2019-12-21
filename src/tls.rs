@@ -17,7 +17,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-pub(crate) async fn consumer_tls<CHANNEL, TOPIC, State>(
+pub(crate) async fn consumer<CHANNEL, TOPIC, State>(
     addr: String,
     auth: Option<String>,
     config: NsqConfig,
@@ -54,7 +54,7 @@ where
     Ok(())
 }
 
-pub(crate) async fn publish_tls<State>(
+pub(crate) async fn publish<State>(
     addr: String,
     state: State,
     cafile: Option<PathBuf>,

@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::auth;
 use crate::config::{Config, NsqConfig};
 use crate::consumer::Consumer;
 use crate::error::NsqError;
@@ -29,10 +28,10 @@ use crate::io::NsqIO;
 use crate::msg::Msg;
 use crate::publisher::Publisher;
 use crate::result::NsqResult;
+use crate::tcp;
 use crate::tls;
 use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
-use futures::io::{AsyncRead, AsyncWrite};
 use log::debug;
 use std::fmt::{Debug, Display};
 use std::path::PathBuf;
@@ -113,7 +112,7 @@ impl<State> Client<State> {
             unreachable!()
         };
         if nsqd_cfg.tls_v1 {
-            tls::consumer_tls(
+            tls::consumer(
                 self.addr,
                 self.auth,
                 nsqd_cfg,
@@ -126,37 +125,18 @@ impl<State> Client<State> {
             )
             .await
         } else {
-            self.consumer_tcp(nsqd_cfg, &mut stream, channel, topic, _future)
-                .await
+            tcp::consumer(
+                self.auth,
+                nsqd_cfg,
+                &mut stream,
+                channel,
+                topic,
+                self.rdy,
+                self.state,
+                _future,
+            )
+            .await
         }
-    }
-
-    async fn consumer_tcp<CHANNEL, TOPIC, S>(
-        self,
-        config: NsqConfig,
-        stream: &mut NsqIO<'_, S>,
-        channel: CHANNEL,
-        topic: TOPIC,
-        _future: impl Consumer<State>,
-    ) -> NsqResult<()>
-    where
-        CHANNEL: Into<String> + Display + Copy,
-        TOPIC: Into<String> + Display + Copy,
-        S: AsyncRead + AsyncWrite + Unpin,
-    {
-        if config.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            stream.reset();
-            if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
-                debug!("AUTH: {:?}", auth);
-            }
-        }
-        let res = utils::sub(stream, channel, topic).await?;
-        debug!("SUB {} {}: {:?}", channel, topic, res);
-        utils::rdy(stream, self.rdy).await?;
-        debug!("RDY {}", self.rdy);
-        Ok(())
     }
 
     pub async fn publish(self, future: impl Publisher<State>) -> NsqResult<Msg> {
@@ -176,7 +156,7 @@ impl<State> Client<State> {
         debug!("{:?}", nsqd_cfg);
         println!("Configuration OK: {:?}", nsqd_cfg);
         if nsqd_cfg.tls_v1 {
-            tls::publish_tls(
+            tls::publish(
                 self.addr,
                 self.state,
                 self.cafile,
@@ -187,31 +167,10 @@ impl<State> Client<State> {
             )
             .await
         } else {
-            self.publish_tcp(nsqd_cfg, &mut stream, future).await
+            tcp::publish(self.auth, nsqd_cfg, &mut stream, self.state, future).await
         }
     }
 
-    async fn publish_tcp<S>(
-        self,
-        config: NsqConfig,
-        stream: &mut NsqIO<'_, S>,
-        future: impl Publisher<State>,
-    ) -> NsqResult<Msg>
-    where
-        S: AsyncWrite + AsyncRead + Unpin,
-    {
-        if config.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            stream.reset();
-            if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
-                debug!("AUTH: {:?}", auth);
-            }
-        }
-        let msg = future.call(self.state).await;
-        stream.reset();
-        utils::io_publish(stream, msg).await
-    }
 }
 
 async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> NsqResult<TcpStream> {
