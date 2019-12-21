@@ -22,6 +22,13 @@
 // SOFTWARE.
 
 use serde::{Deserialize, Serialize};
+use crate::result::NsqResult;
+use futures::{AsyncRead, AsyncWrite};
+use crate::utils;
+use crate::io::NsqIO;
+use crate::msg::Msg;
+use std::io;
+use log::debug;
 
 /// Authentication response sent by nsqd to the client after the AUTH command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -29,4 +36,17 @@ pub struct Reply {
     identity: String,
     identity_url: Option<String>,
     permission_count: i32,
+}
+
+pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(auth: Option<String>, stream: &mut NsqIO<'_, S>) -> NsqResult<()> {
+    if auth.is_none() {
+        return Err(io::Error::new(io::ErrorKind::Other, "When configured with auth, authentication token must be provided").into())
+    }
+    let auth_token = auth.unwrap();
+    stream.reset();
+    if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
+        let auth: Reply = serde_json::from_str(&s)?;
+        debug!("AUTH: {:?}", auth);
+    }
+    Ok(())
 }

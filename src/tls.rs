@@ -17,7 +17,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-pub async fn consumer_tls<CHANNEL, TOPIC, State>(
+pub(crate) async fn consumer_tls<CHANNEL, TOPIC, State>(
     addr: String,
     auth: Option<String>,
     config: NsqConfig,
@@ -44,13 +44,8 @@ where
     let mut stream = NsqIO::new(&mut tls_stream, 1024);
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
-    if config.auth_required && auth.is_some() {
-        let auth_token = auth.unwrap();
-        stream.reset();
-        if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-            let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
-            debug!("AUTH: {:?}", auth);
-        }
+    if config.auth_required {
+        auth::authenticate(auth, &mut stream).await?;
     }
     let res = utils::sub(&mut stream, channel, topic).await?;
     debug!("SUB: {} {}: {:?}", channel, topic, res);
@@ -59,7 +54,7 @@ where
     Ok(())
 }
 
-pub async fn publish_tls<State>(
+pub(crate) async fn publish_tls<State>(
     addr: String,
     state: State,
     cafile: Option<PathBuf>,
@@ -80,13 +75,8 @@ pub async fn publish_tls<State>(
     let mut stream = NsqIO::new(&mut tls_stream, 1024);
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
-    if config.auth_required && auth.is_some() {
-        let auth_token = auth.unwrap();
-        stream.reset();
-        if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-            let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
-            debug!("AUTH: {:?}", auth);
-        }
+    if config.auth_required {
+        auth::authenticate(auth, &mut stream).await?;
     }
     let msg = future.call(state).await;
     stream.reset();
