@@ -22,14 +22,12 @@
 // SOFTWARE.
 
 use crate::config::{Config, NsqConfig};
-use crate::consumer::Consumer;
+use crate::handler::Consumer;
 use crate::error::NsqError;
-use crate::io::NsqIO;
+use crate::io::{NsqIO, tcp, tls};
 use crate::msg::Msg;
-use crate::publisher::Publisher;
+use crate::handler::Publisher;
 use crate::result::NsqResult;
-use crate::tcp;
-use crate::tls;
 use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
 use log::debug;

@@ -1,9 +1,9 @@
 use crate::auth;
 use crate::config::NsqConfig;
-use crate::consumer::Consumer;
+use crate::handler::Consumer;
 use crate::io::NsqIO;
 use crate::msg::Msg;
-use crate::publisher::Publisher;
+use crate::handler::Publisher;
 use crate::result::NsqResult;
 use crate::utils;
 use async_std::net::TcpStream;

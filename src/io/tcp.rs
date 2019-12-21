@@ -1,7 +1,7 @@
 use crate::auth;
 use crate::config::NsqConfig;
-use crate::consumer::Consumer;
-use crate::publisher::Publisher;
+use crate::handler::Consumer;
+use crate::handler::Publisher;
 use crate::io::NsqIO;
 use crate::result::NsqResult;
 use crate::utils;

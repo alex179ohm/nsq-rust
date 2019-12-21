@@ -21,6 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+pub mod tcp;
+pub mod tls;
+
 use crate::codec::decode_msg;
 use crate::error::NsqError;
 use crate::msg::Msg;
