@@ -32,6 +32,7 @@ mod io;
 mod msg;
 mod publisher;
 mod result;
+mod tls;
 mod utils;
 
 pub mod prelude {

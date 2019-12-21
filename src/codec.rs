@@ -99,7 +99,16 @@ impl From<Sub<'_>> for Message {
     fn from(sub: Sub<'_>) -> Self {
         let len = sub.0.len();
         let mut buf = Vec::with_capacity(6 + len);
-        buf.extend_from_slice(&[&b"SUB "[..], sub.0.as_bytes(), &b" "[..], sub.1.as_bytes(), &b"\n"[..]].concat());
+        buf.extend_from_slice(
+            &[
+                &b"SUB "[..],
+                sub.0.as_bytes(),
+                &b" "[..],
+                sub.1.as_bytes(),
+                &b"\n"[..],
+            ]
+            .concat(),
+        );
         Message(buf)
     }
 }
@@ -178,7 +187,16 @@ impl From<Dpub> for Message {
         let msg_len = msg.2.len();
         let len = msg.0.len() + msg.1.len() + msg_len;
         let mut buf = Vec::with_capacity(11 + len);
-        buf.extend_from_slice(&[&b"DPUB "[..], msg.0.as_bytes(), &b" "[..], msg.1.as_bytes(), &b"\n"[..]].concat());
+        buf.extend_from_slice(
+            &[
+                &b"DPUB "[..],
+                msg.0.as_bytes(),
+                &b" "[..],
+                msg.1.as_bytes(),
+                &b"\n"[..],
+            ]
+            .concat(),
+        );
         buf.extend_from_slice(&(msg_len as u32).to_be_bytes());
         buf.extend_from_slice(msg.2.as_slice());
         Message(buf)
@@ -228,7 +246,16 @@ impl Req {
 impl From<Req> for Message {
     fn from(req: Req) -> Self {
         let mut buf = Vec::with_capacity(req.0.len() + req.1.len() + 6);
-        buf.extend_from_slice(&[&b"REQ "[..], req.0.as_bytes(), &b" "[..], req.1.as_bytes(), &b"\n"[..]].concat());
+        buf.extend_from_slice(
+            &[
+                &b"REQ "[..],
+                req.0.as_bytes(),
+                &b" "[..],
+                req.1.as_bytes(),
+                &b"\n"[..],
+            ]
+            .concat(),
+        );
         Message(buf)
     }
 }

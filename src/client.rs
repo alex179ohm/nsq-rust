@@ -29,18 +29,13 @@ use crate::io::NsqIO;
 use crate::msg::Msg;
 use crate::publisher::Publisher;
 use crate::result::NsqResult;
+use crate::tls;
 use crate::utils;
-use async_std::io;
 use async_std::net::{TcpStream, ToSocketAddrs};
-use async_std::stream::StreamExt;
-use async_tls::TlsConnector;
 use futures::io::{AsyncRead, AsyncWrite};
 use log::debug;
-use rustls::ClientConfig;
 use std::fmt::{Debug, Display};
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::path::PathBuf;
 
 #[derive(Clone)]
 pub struct Client<State> {
@@ -89,7 +84,6 @@ impl<State> Client<State> {
     }
 }
 
-
 impl<State> Client<State> {
     pub async fn consumer<CHANNEL, TOPIC>(
         self,
@@ -107,62 +101,34 @@ impl<State> Client<State> {
         }
         let mut stream = NsqIO::new(&mut tcp_stream, 1024);
         let nsqd_cfg: NsqConfig;
-        match utils::identify(&mut stream, self.config.clone()).await {
-            Ok(Msg::Json(s)) => {
-                nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error")
-            }
-            Err(e) => return Err(e),
-            _ => unreachable!(),
-        }
-        debug!("{:?}", nsqd_cfg);
-        debug!("Configuration OK: {:?}", nsqd_cfg);
+        if let Msg::Json(s) = utils::identify(&mut stream, self.config.clone()).await? {
+            //            Ok(Msg::Json(s)) => {
+            nsqd_cfg = serde_json::from_str(&s)?;
+            //            }
+            //            Err(e) => return Err(e),
+            //            _ => unreachable!(),
+            debug!("{:?}", nsqd_cfg);
+            debug!("Configuration OK: {:?}", nsqd_cfg);
+        } else {
+            unreachable!()
+        };
         if nsqd_cfg.tls_v1 {
-            self.consumer_tls(nsqd_cfg, &mut tcp_stream, channel, topic, _future)
-                .await
+            tls::consumer_tls(
+                self.addr,
+                self.auth,
+                nsqd_cfg,
+                self.cafile,
+                &mut tcp_stream,
+                channel,
+                topic,
+                self.rdy,
+                _future,
+            )
+            .await
         } else {
             self.consumer_tcp(nsqd_cfg, &mut stream, channel, topic, _future)
                 .await
         }
-    }
-
-    async fn consumer_tls<CHANNEL, TOPIC>(
-        self,
-        config: NsqConfig,
-        stream: &mut TcpStream,
-        channel: CHANNEL,
-        topic: TOPIC,
-        _future: impl Consumer<State>,
-    ) -> NsqResult<()>
-    where
-        CHANNEL: Into<String> + Copy + Display,
-        TOPIC: Into<String> + Copy + Display,
-    {
-        let addr: Vec<&str> = self.addr.split(':').collect();
-        let cafile = self.cafile;
-        let connector = if let Some(cafile) = cafile {
-            connector_from_cafile(&cafile)
-                .await
-                .expect("failed to read cafile")
-        } else {
-            TlsConnector::new()
-        };
-        let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-        let mut stream = NsqIO::new(&mut tls_stream, 1024);
-        stream.next().await.unwrap()?;
-        debug!("TLS Ok");
-        if config.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            stream.reset();
-            if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
-                debug!("AUTH: {:?}", auth);
-            }
-        }
-        let res = utils::sub(&mut stream, channel, topic).await?;
-        debug!("SUB: {} {}: {:?}", channel, topic, res);
-        utils::rdy(&mut stream, self.rdy).await?;
-        debug!("RDY {}", self.rdy);
-        Ok(())
     }
 
     async fn consumer_tcp<CHANNEL, TOPIC, S>(
@@ -210,42 +176,19 @@ impl<State> Client<State> {
         debug!("{:?}", nsqd_cfg);
         println!("Configuration OK: {:?}", nsqd_cfg);
         if nsqd_cfg.tls_v1 {
-            self.publish_tls(nsqd_cfg, &mut tcp_stream, future).await
+            tls::publish_tls(
+                self.addr,
+                self.state,
+                self.cafile,
+                self.auth,
+                nsqd_cfg,
+                &mut tcp_stream,
+                future,
+            )
+            .await
         } else {
             self.publish_tcp(nsqd_cfg, &mut stream, future).await
         }
-    }
-
-    async fn publish_tls(
-        self,
-        config: NsqConfig,
-        stream: &mut TcpStream,
-        future: impl Publisher<State>,
-    ) -> NsqResult<Msg> {
-        let addr: Vec<&str> = self.addr.split(':').collect();
-        let cafile = self.cafile;
-        let connector = if let Some(cafile) = cafile {
-            connector_from_cafile(&cafile)
-                .await
-                .expect("failed to read cafile")
-        } else {
-            TlsConnector::new()
-        };
-        let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-        let mut stream = NsqIO::new(&mut tls_stream, 1024);
-        stream.next().await.unwrap()?;
-        debug!("TLS Ok");
-        if config.auth_required && self.auth.is_some() {
-            let auth_token = self.auth.unwrap();
-            stream.reset();
-            if let Msg::Json(s) = utils::auth(&mut stream, auth_token).await? {
-                let auth: auth::Reply = serde_json::from_str(&s).expect("json deserialize error");
-                debug!("AUTH: {:?}", auth);
-            }
-        }
-        let msg = future.call(self.state).await;
-        stream.reset();
-        utils::io_publish(&mut stream, msg).await
     }
 
     async fn publish_tcp<S>(
@@ -280,15 +223,4 @@ async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> NsqResult<TcpStream
         }
         Err(e) => Err(NsqError::from(e)),
     }
-}
-
-async fn connector_from_cafile(cafile: &Path) -> io::Result<TlsConnector> {
-    let mut config = ClientConfig::new();
-    let file = async_std::fs::read(cafile).await?;
-    let mut pem = Cursor::new(file);
-    config
-        .root_store
-        .add_pem_file(&mut pem)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))?;
-    Ok(TlsConnector::from(Arc::new(config)))
 }
