@@ -22,11 +22,11 @@
 // SOFTWARE.
 
 use crate::config::{Config, NsqConfig};
-use crate::handler::Consumer;
 use crate::error::NsqError;
-use crate::io::{NsqIO, tcp, tls};
-use crate::msg::Msg;
+use crate::handler::Consumer;
 use crate::handler::Publisher;
+use crate::io::{tcp, tls, NsqIO};
+use crate::msg::Msg;
 use crate::result::NsqResult;
 use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
@@ -168,7 +168,6 @@ impl<State> Client<State> {
             tcp::publish(self.auth, nsqd_cfg, &mut stream, self.state, future).await
         }
     }
-
 }
 
 async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> NsqResult<TcpStream> {

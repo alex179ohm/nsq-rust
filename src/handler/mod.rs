@@ -1,5 +1,5 @@
-mod publisher;
 mod consumer;
+mod publisher;
 
-pub use publisher::*;
 pub use consumer::*;
+pub use publisher::*;
