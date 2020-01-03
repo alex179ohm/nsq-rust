@@ -26,15 +26,11 @@ mod auth;
 mod client;
 mod codec;
 mod config;
-//mod consumer;
 mod error;
 mod handler;
 mod io;
 mod msg;
-//mod publisher;
 mod result;
-//mod tcp;
-//mod tls;
 mod utils;
 
 pub mod prelude {
