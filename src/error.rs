@@ -115,8 +115,8 @@ impl From<NsqError> for io::Error {
     fn from(e: NsqError) -> Self {
         match e {
             NsqError::Io(e) => e,
-            NsqError::Json(e) => io::Error::new(io::ErrorKind::Other, e.description()),
-            e => io::Error::new(io::ErrorKind::Other, e.description()),
+            NsqError::Json(e) => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
+            e => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
         }
     }
 }
