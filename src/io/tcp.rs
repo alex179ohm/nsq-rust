@@ -10,6 +10,7 @@ use futures::{AsyncRead, AsyncWrite};
 use log::debug;
 use std::fmt::Display;
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn consumer<CHANNEL, TOPIC, S, State>(
     auth: Option<String>,
     config: NsqConfig,
