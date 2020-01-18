@@ -97,18 +97,19 @@ impl<State> Client<State> {
             return Err(e);
         }
         let mut stream = NsqIO::new(&mut tcp_stream, 1024);
-        let nsqd_cfg: NsqConfig;
-        if let Msg::Json(s) = utils::identify(&mut stream, self.config.clone()).await? {
-            //            Ok(Msg::Json(s)) => {
-            nsqd_cfg = serde_json::from_str(&s)?;
-            //            }
-            //            Err(e) => return Err(e),
-            //            _ => unreachable!(),
-            debug!("{:?}", nsqd_cfg);
-            debug!("Configuration OK: {:?}", nsqd_cfg);
-        } else {
-            unreachable!()
+        let resp = match utils::identify(&mut stream, self.config.clone()).await {
+            Ok(Msg::Json(s)) => s,
+            Ok(r) => {
+                return Err(NsqError::from(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("unexpected response: {:?}", r),
+                )))
+            }
+            Err(e) => return Err(e),
         };
+        let nsqd_cfg: NsqConfig = serde_json::from_str(&resp)?;
+        debug!("{:?}", nsqd_cfg);
+        debug!("Configuration OK: {:?}", nsqd_cfg);
         if nsqd_cfg.tls_v1 {
             tls::consumer(
                 self.addr,

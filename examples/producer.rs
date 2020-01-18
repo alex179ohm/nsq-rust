@@ -4,7 +4,7 @@ use log;
 use nsq_rust::prelude::*;
 use std::error::Error;
 
-async fn my_pub(_: ()) -> Message {
+async fn my_pub(_app: ()) -> Message {
     Pub::new("test".to_owned(), b"ciao".to_vec()).into()
 }
 
