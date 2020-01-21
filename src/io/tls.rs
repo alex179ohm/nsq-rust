@@ -4,8 +4,8 @@ use crate::handler::Consumer;
 use crate::handler::Publisher;
 use crate::io::NsqIO;
 use crate::msg::Msg;
-use crate::result::NsqResult;
 use crate::utils;
+use crate::error::NsqError;
 use async_std::net::TcpStream;
 use async_std::stream::StreamExt;
 use async_tls::TlsConnector;
@@ -28,7 +28,7 @@ pub(crate) async fn consumer<CHANNEL, TOPIC, State>(
     topic: TOPIC,
     rdy: u32,
     _future: impl Consumer<State>,
-) -> NsqResult<()>
+) -> Result<(), NsqError>
 where
     CHANNEL: Into<String> + Copy + Display,
     TOPIC: Into<String> + Copy + Display,
@@ -63,7 +63,7 @@ pub(crate) async fn publish<State>(
     config: NsqConfig,
     stream: &mut TcpStream,
     future: impl Publisher<State>,
-) -> NsqResult<Msg> {
+) -> Result<Msg, NsqError> {
     let addr: Vec<&str> = addr.split(':').collect();
     let connector = if let Some(cafile) = cafile {
         connector_from_cafile(&cafile)

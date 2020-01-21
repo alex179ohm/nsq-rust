@@ -29,7 +29,6 @@ mod error;
 mod handler;
 mod io;
 mod msg;
-mod result;
 mod utils;
 
 pub mod prelude {

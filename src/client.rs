@@ -27,7 +27,6 @@ use crate::handler::Consumer;
 use crate::handler::Publisher;
 use crate::io::{tcp, tls, NsqIO};
 use crate::msg::Msg;
-use crate::result::NsqResult;
 use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
 use log::debug;
@@ -87,7 +86,7 @@ impl<State> Client<State> {
         channel: CHANNEL,
         topic: TOPIC,
         _future: impl Consumer<State>,
-    ) -> NsqResult<()>
+    ) -> Result<(), NsqError>
     where
         CHANNEL: Into<String> + Display + Copy,
         TOPIC: Into<String> + Display + Copy,
@@ -138,7 +137,7 @@ impl<State> Client<State> {
         }
     }
 
-    pub async fn publish(self, future: impl Publisher<State>) -> NsqResult<Msg> {
+    pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, NsqError> {
         let mut tcp_stream = connect(self.addr.clone()).await?;
         let mut stream = NsqIO::new(&mut tcp_stream, 1024);
         if let Err(e) = utils::magic(&mut stream).await {
@@ -171,7 +170,7 @@ impl<State> Client<State> {
     }
 }
 
-async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> NsqResult<TcpStream> {
+async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> Result<TcpStream, NsqError> {
     debug!("Trying to connect to: {:?}", addr);
     match TcpStream::connect(addr).await {
         Ok(s) => {

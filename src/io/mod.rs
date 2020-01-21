@@ -27,11 +27,11 @@ pub mod tls;
 use crate::codec::decode_msg;
 use crate::error::NsqError;
 use crate::msg::Msg;
-use crate::result::NsqResult;
 use async_std::stream::Stream;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
-use futures::io::{AsyncRead, AsyncWrite, Result};
+use futures::io;
+use futures::io::{AsyncRead, AsyncWrite};
 use log::debug;
 use std::{
     convert::TryFrom,
@@ -64,7 +64,7 @@ impl<'a, S> NsqIO<'a, S> {
 }
 
 impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
-    type Item = NsqResult<Msg>;
+    type Item = Result<Msg, NsqError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
@@ -123,17 +123,17 @@ impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
 }
 
 impl<'a, S: AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
-    fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
+    fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_write(cx, buf)
     }
 
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_flush(cx)
     }
 
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_close(cx)
     }
@@ -144,7 +144,7 @@ impl<'a, S: AsyncRead + Unpin> AsyncRead for NsqIO<'a, S> {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &mut [u8],
-    ) -> Poll<Result<usize>> {
+    ) -> Poll<io::Result<usize>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_read(cx, buf)
     }

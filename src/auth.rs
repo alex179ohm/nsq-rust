@@ -23,7 +23,7 @@
 
 use crate::io::NsqIO;
 use crate::msg::Msg;
-use crate::result::NsqResult;
+use crate::error::NsqError;
 use crate::utils;
 use futures::{AsyncRead, AsyncWrite};
 use log::debug;
@@ -41,7 +41,7 @@ pub struct Reply {
 pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
     auth: Option<String>,
     stream: &mut NsqIO<'_, S>,
-) -> NsqResult<()> {
+) -> Result<(), NsqError> {
     if auth.is_none() {
         return Err(io::Error::new(
             io::ErrorKind::Other,
