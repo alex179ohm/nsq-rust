@@ -23,7 +23,8 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Configuration sent to nsqd to properly config the [Client](struct.Client.html) Connection
+/// Configuration sent to nsqd to properly config the [Client](struct.Client.html)
+/// Connection
 ///
 /// # Examples
 ///```
@@ -56,7 +57,8 @@ pub struct Config {
     /// Default: **30000**
     pub heartbeat_interval: i64,
 
-    /// Size of the buffer (in bytes) used by nsqd for buffering writes to this connection
+    /// Size of the buffer (in bytes) used by nsqd for buffering writes to this
+    /// connection
     ///
     /// Valid values:
     /// * -1 disable output buffer
@@ -65,7 +67,8 @@ pub struct Config {
     /// Default: **16384**
     pub output_buffer_size: u64,
 
-    /// The timeout after which data nsqd has buffered will be flushed to this client.
+    /// The timeout after which data nsqd has buffered will be flushed to this
+    /// client.
     ///
     /// Valid values:
     /// * -1 disable buffer timeout

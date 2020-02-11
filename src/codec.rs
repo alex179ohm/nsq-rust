@@ -278,7 +278,6 @@ impl From<Cls> for Message {
 }
 
 pub fn decode_msg(buf: &mut [u8]) -> (i64, u16, String, Vec<u8>) {
-    // skip size and frame type
     let timestamp = BigEndian::read_i64(&buf[..8]);
     let attemps = BigEndian::read_u16(&buf[8..10]);
     let id_bytes = &buf[10..26];

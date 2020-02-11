@@ -41,10 +41,13 @@ pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO) -> Result<(), ClientEr
 }
 
 /// Send the [Identify](struct.Identify.html) *msg* to nsqd, and return the
-pub(crate) async fn identify<IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin>(
+pub(crate) async fn identify<IO>(
     io: &mut IO,
     config: Config,
-) -> Result<Msg, ClientError> {
+) -> Result<Msg, ClientError>
+where
+    IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin,
+{
     let msg_string = serde_json::to_string(&config)?;
     let buf: Message = Identify::new(msg_string.as_str()).into();
 
@@ -55,7 +58,10 @@ pub(crate) async fn identify<IO: Write + Stream<Item = Result<Msg, ClientError>>
     io.next().await.unwrap()
 }
 
-pub(crate) async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH) -> Result<Msg, ClientError>
+pub(crate) async fn auth<IO, AUTH>(
+    io: &mut IO,
+    auth: AUTH
+) -> Result<Msg, ClientError>
 where
     IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin,
     AUTH: Into<String>,
@@ -88,7 +94,10 @@ where
     io.next().await.unwrap()
 }
 
-pub(crate) async fn rdy<IO: Write + Unpin>(io: &mut IO, rdy: u32) -> Result<(), ClientError> {
+pub(crate) async fn rdy<IO: Write + Unpin>(
+    io: &mut IO,
+    rdy: u32
+) -> Result<(), ClientError> {
     let buf: Message = Rdy::new(&rdy.to_string()).into();
 
     if let Err(e) = io.write_all(&buf[..]).await {
