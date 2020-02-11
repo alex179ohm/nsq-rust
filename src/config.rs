@@ -26,18 +26,9 @@ use serde::{Deserialize, Serialize};
 /// Configuration sent to nsqd to properly config the [Client](struct.Client.html) Connection
 ///
 /// # Examples
-///```no-run
-/// use nsq_client::{Client, Config};
-///
-/// let config = Config::new().client_id("consumer").user_agent("node-1");
-/// Client::new(
-///     "test",
-///     "test",
-///     "0.0.0.0:4150",
-///     Some(config),
-///     None,
-///     None,
-/// );
+///```
+/// //let config = Config::new().client_id("consumer").user_agent("node-1");
+/// //println!("{:?}", config);
 ///```
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
@@ -122,7 +113,6 @@ pub struct Config {
     /// Default: **0**
     pub message_timeout: u32,
 }
-use hostname;
 
 fn get_hostname() -> Option<String> {
     if let Ok(h) = hostname::get() {
@@ -173,10 +163,8 @@ pub struct NsqConfig {
 
 #[allow(dead_code)]
 impl Config {
-    /// Create default [Config](struct.Config.html)
-    /// ```no-run
-    /// use nsq_client::{Config};
-    ///
+    /// Create defaults [Config](struct.Config.html)
+    /// ```
     /// let config = Config::new();
     /// assert_eq!(config, Config::default());
     /// ```

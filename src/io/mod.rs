@@ -25,7 +25,7 @@ pub mod tcp;
 pub mod tls;
 
 use crate::codec::decode_msg;
-use crate::error::NsqError;
+use crate::error::ClientError;
 use crate::msg::Msg;
 use async_std::stream::Stream;
 use byteorder::{BigEndian, ByteOrder};
@@ -64,7 +64,7 @@ impl<'a, S> NsqIO<'a, S> {
 }
 
 impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
-    type Item = Result<Msg, NsqError>;
+    type Item = Result<Msg, ClientError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
@@ -105,7 +105,7 @@ impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
                     }
                     1 => {
                         this.exit = true;
-                        Poll::Ready(Some(Err(NsqError::from(
+                        Poll::Ready(Some(Err(ClientError::from(
                             from_utf8(&this.read_buffer.split_to(size + 4)[..])
                                 .expect("failed to encode utf8"),
                         ))))
@@ -123,7 +123,11 @@ impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
 }
 
 impl<'a, S: AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
-    fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
         let this = self.get_mut();
         Pin::new(&mut this.stream).poll_write(cx, buf)
     }

@@ -21,9 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::error::ClientError;
 use crate::io::NsqIO;
 use crate::msg::Msg;
-use crate::error::NsqError;
 use crate::utils;
 use futures::{AsyncRead, AsyncWrite};
 use log::debug;
@@ -41,7 +41,7 @@ pub struct Reply {
 pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
     auth: Option<String>,
     stream: &mut NsqIO<'_, S>,
-) -> Result<(), NsqError> {
+) -> Result<(), ClientError> {
     if auth.is_none() {
         return Err(io::Error::new(
             io::ErrorKind::Other,
@@ -49,8 +49,10 @@ pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
         )
         .into());
     }
+
     let auth_token = auth.unwrap();
     stream.reset();
+
     if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
         let auth: Reply = serde_json::from_str(&s)?;
         debug!("AUTH: {:?}", auth);

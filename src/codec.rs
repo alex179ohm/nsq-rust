@@ -21,15 +21,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use std::ops;
 use std::str;
 
 use byteorder::{BigEndian, ByteOrder};
 
 pub struct Message(Vec<u8>);
 
-impl Message {
-    pub fn as_slice(&self) -> &[u8] {
-        self.0.as_slice()
+impl ops::Index<usize> for Message {
+    type Output = u8;
+    fn index(&self, index: usize) -> &u8 {
+        &self.0[index]
+    }
+}
+
+impl ops::Index<ops::RangeFull> for Message {
+    type Output = [u8];
+    fn index(&self, _index: ops::RangeFull) -> &[u8] {
+        &self.0
     }
 }
 

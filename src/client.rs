@@ -22,14 +22,14 @@
 // SOFTWARE.
 
 use crate::config::{Config, NsqConfig};
-use crate::error::NsqError;
+use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
 use crate::io::{tcp, tls, NsqIO};
 use crate::msg::Msg;
 use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
-use log::debug;
+use log::{debug, info};
 use std::fmt::{Debug, Display};
 use std::path::PathBuf;
 
@@ -86,29 +86,34 @@ impl<State> Client<State> {
         channel: CHANNEL,
         topic: TOPIC,
         _future: impl Consumer<State>,
-    ) -> Result<(), NsqError>
+    ) -> Result<(), ClientError>
     where
         CHANNEL: Into<String> + Display + Copy,
         TOPIC: Into<String> + Display + Copy,
     {
         let mut tcp_stream = connect(self.addr.clone()).await?;
+
         if let Err(e) = utils::magic(&mut tcp_stream).await {
             return Err(e);
         }
+
         let mut stream = NsqIO::new(&mut tcp_stream, 1024);
+
         let resp = match utils::identify(&mut stream, self.config.clone()).await {
             Ok(Msg::Json(s)) => s,
             Ok(r) => {
-                return Err(NsqError::from(std::io::Error::new(
+                return Err(ClientError::from(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("unexpected response: {:?}", r),
                 )))
             }
             Err(e) => return Err(e),
         };
+
         let nsqd_cfg: NsqConfig = serde_json::from_str(&resp)?;
         debug!("{:?}", nsqd_cfg);
         debug!("Configuration OK: {:?}", nsqd_cfg);
+
         if nsqd_cfg.tls_v1 {
             tls::consumer(
                 self.addr,
@@ -137,12 +142,15 @@ impl<State> Client<State> {
         }
     }
 
-    pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, NsqError> {
+    pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, ClientError> {
+
         let mut tcp_stream = connect(self.addr.clone()).await?;
         let mut stream = NsqIO::new(&mut tcp_stream, 1024);
+
         if let Err(e) = utils::magic(&mut stream).await {
             return Err(e);
         }
+
         let nsqd_cfg: NsqConfig;
         match utils::identify(&mut stream, self.config.clone()).await {
             Ok(Msg::Json(s)) => {
@@ -152,7 +160,8 @@ impl<State> Client<State> {
             _ => unreachable!(),
         }
         debug!("{:?}", nsqd_cfg);
-        println!("Configuration OK: {:?}", nsqd_cfg);
+        info!("Configuration OK: {:?}", nsqd_cfg);
+
         if nsqd_cfg.tls_v1 {
             tls::publish(
                 self.addr,
@@ -170,13 +179,13 @@ impl<State> Client<State> {
     }
 }
 
-async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> Result<TcpStream, NsqError> {
+async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> Result<TcpStream, ClientError> {
     debug!("Trying to connect to: {:?}", addr);
     match TcpStream::connect(addr).await {
         Ok(s) => {
             debug!("Connected: {:?}", s.peer_addr());
             Ok(s)
         }
-        Err(e) => Err(NsqError::from(e)),
+        Err(e) => Err(ClientError::from(e)),
     }
 }

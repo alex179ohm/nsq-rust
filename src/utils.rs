@@ -23,41 +23,49 @@
 
 use crate::codec::{Auth, Identify, Magic, Message, Rdy, Sub};
 use crate::config::Config;
-use crate::error::NsqError;
+use crate::error::ClientError;
 use crate::msg::Msg;
 use async_std::io::prelude::*;
 use async_std::stream::StreamExt;
 use futures::Stream;
 
-pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO) -> Result<(), NsqError> {
+/// Send the [Magic](struct.Magic.html) to the nsqd server.
+pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO) -> Result<(), ClientError> {
     let buf: Message = Magic {}.into();
-    if let Err(e) = io.write_all(buf.as_slice()).await {
-        return Err(NsqError::from(e));
+
+    if let Err(e) = io.write_all(&buf[..]).await {
+        return Err(ClientError::from(e));
     };
+
     Ok(())
 }
 
-pub(crate) async fn identify<IO: Write + Stream<Item = Result<Msg, NsqError>> + Unpin>(
+/// Send the [Identify](struct.Identify.html) *msg* to nsqd, and return the
+pub(crate) async fn identify<IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin>(
     io: &mut IO,
     config: Config,
-) -> Result<Msg, NsqError> {
+) -> Result<Msg, ClientError> {
     let msg_string = serde_json::to_string(&config)?;
     let buf: Message = Identify::new(msg_string.as_str()).into();
-    if let Err(e) = io.write_all(buf.as_slice()).await {
-        return Err(NsqError::from(e));
+
+    if let Err(e) = io.write_all(&buf[..]).await {
+        return Err(ClientError::from(e));
     };
+
     io.next().await.unwrap()
 }
 
-pub(crate) async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH) -> Result<Msg, NsqError>
+pub(crate) async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH) -> Result<Msg, ClientError>
 where
-    IO: Write + Stream<Item = Result<Msg, NsqError>> + Unpin,
+    IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin,
     AUTH: Into<String>,
 {
     let buf: Message = Auth::new(auth.into().as_str()).into();
-    if let Err(e) = io.write_all(buf.as_slice()).await {
-        return Err(NsqError::from(e));
+
+    if let Err(e) = io.write_all(&buf[..]).await {
+        return Err(ClientError::from(e));
     };
+
     io.next().await.unwrap()
 }
 
@@ -65,33 +73,38 @@ pub(crate) async fn sub<IO, CHANNEL, TOPIC>(
     io: &mut IO,
     channel: CHANNEL,
     topic: TOPIC,
-) -> Result<Msg, NsqError>
+) -> Result<Msg, ClientError>
 where
-    IO: Write + Stream<Item = Result<Msg, NsqError>> + Unpin,
+    IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin,
     CHANNEL: Into<String>,
     TOPIC: Into<String>,
 {
     let buf: Message = Sub::new(&channel.into(), &topic.into()).into();
-    if let Err(e) = io.write_all(buf.as_slice()).await {
-        return Err(NsqError::from(e));
+
+    if let Err(e) = io.write_all(&buf[..]).await {
+        return Err(ClientError::from(e));
     }
+
     io.next().await.unwrap()
 }
 
-pub(crate) async fn rdy<IO: Write + Unpin>(io: &mut IO, rdy: u32) -> Result<(), NsqError> {
+pub(crate) async fn rdy<IO: Write + Unpin>(io: &mut IO, rdy: u32) -> Result<(), ClientError> {
     let buf: Message = Rdy::new(&rdy.to_string()).into();
-    if let Err(e) = io.write_all(buf.as_slice()).await {
-        return Err(NsqError::from(e));
+
+    if let Err(e) = io.write_all(&buf[..]).await {
+        return Err(ClientError::from(e));
     }
+
     Ok(())
 }
 
-pub async fn io_publish<S>(io: &mut S, msg: Message) -> Result<Msg, NsqError>
+pub async fn io_publish<S>(io: &mut S, msg: Message) -> Result<Msg, ClientError>
 where
-    S: Write + Stream<Item = Result<Msg, NsqError>> + Unpin,
+    S: Write + Stream<Item = Result<Msg, ClientError>> + Unpin,
 {
-    if let Err(e) = io.write_all(msg.as_slice()).await {
-        return Err(NsqError::from(e));
+    if let Err(e) = io.write_all(&msg[..]).await {
+        return Err(ClientError::from(e));
     }
+
     io.next().await.unwrap()
 }

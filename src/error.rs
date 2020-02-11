@@ -21,14 +21,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use serde_json;
 use std::error::Error;
 use std::{fmt, io};
 
 #[derive(Debug)]
 pub enum NsqError {
-    Io(io::Error),
-    Json(serde_json::Error),
     Invalid,
     Body,
     Topic,
@@ -46,40 +43,34 @@ pub enum NsqError {
 
 impl fmt::Display for NsqError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use NsqError::*;
         match self {
-            Io(_) => write!(f, "network failed"),
-            Json(e) => write!(f, "json deserialize: {}", e),
-            Invalid => write!(f, "E_INVALID"),
-            Body => write!(f, "E_BAD_BODY"),
-            Topic => write!(f, "E_BAD_TOPIC"),
-            Channel => write!(f, "E_BAD_CHANNEL"),
-            Message => write!(f, "E_BAD_MESSAGE"),
-            Pub => write!(f, "E_PUB_FAILED"),
-            Mpub => write!(f, "E_MPUB_FAILED"),
-            Dpub => write!(f, "E_DPUB_FAILED"),
-            Fin => write!(f, "E_FIN_FAILED"),
-            Req => write!(f, "E_REQ_FAILED"),
-            Touch => write!(f, "E_TOUCH_FAILED"),
-            Auth => write!(f, "E_AUTH_FAILED"),
-            Unauthorized => write!(f, "E_UNAUTHORIZED"),
+            Self::Invalid => write!(f, "E_INVALID"),
+            Self::Body => write!(f, "E_BAD_BODY"),
+            Self::Topic => write!(f, "E_BAD_TOPIC"),
+            Self::Channel => write!(f, "E_BAD_CHANNEL"),
+            Self::Message => write!(f, "E_BAD_MESSAGE"),
+            Self::Pub => write!(f, "E_PUB_FAILED"),
+            Self::Mpub => write!(f, "E_MPUB_FAILED"),
+            Self::Dpub => write!(f, "E_DPUB_FAILED"),
+            Self::Fin => write!(f, "E_FIN_FAILED"),
+            Self::Req => write!(f, "E_REQ_FAILED"),
+            Self::Touch => write!(f, "E_TOUCH_FAILED"),
+            Self::Auth => write!(f, "E_AUTH_FAILED"),
+            Self::Unauthorized => write!(f, "E_UNAUTHORIZED"),
         }
     }
 }
 
 impl Error for NsqError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        use NsqError::*;
         match self {
-            Io(e) => Some(e),
-            Json(e) => Some(e),
-            _ => None,
+            e => Some(e),
         }
     }
 }
 
-impl From<&'_ str> for NsqError {
-    fn from(s: &'_ str) -> NsqError {
+impl From<&str> for NsqError {
+    fn from(s: &str) -> NsqError {
         match s {
             "E_INVALID" => NsqError::Invalid,
             "E_BAD_BODY" => NsqError::Body,
@@ -99,24 +90,53 @@ impl From<&'_ str> for NsqError {
     }
 }
 
-impl From<serde_json::Error> for NsqError {
-    fn from(e: serde_json::Error) -> NsqError {
-        NsqError::Json(e)
-    }
+#[derive(Debug)]
+pub enum ClientError {
+    Json(serde_json::Error),
+    Io(io::Error),
+    Nsq(NsqError),
 }
 
-impl From<io::Error> for NsqError {
-    fn from(e: io::Error) -> Self {
-        NsqError::Io(e)
-    }
-}
-
-impl From<NsqError> for io::Error {
-    fn from(e: NsqError) -> Self {
-        match e {
-            NsqError::Io(e) => e,
-            NsqError::Json(e) => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
-            e => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
+impl fmt::Display for ClientError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Json(e) => write!(f, "{}", e),
+            Self::Io(e) => write!(f, "{}", e),
+            Self::Nsq(e) => write!(f, "{}", e),
         }
+    }
+}
+
+impl Error for ClientError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Io(e) => Some(e),
+            Self::Json(e) => Some(e),
+            Self::Nsq(e) => Some(e),
+        }
+    }
+}
+
+impl From<&str> for ClientError {
+    fn from(e: &str) -> Self {
+        ClientError::Nsq(NsqError::from(e))
+    }
+}
+
+impl From<serde_json::Error> for ClientError {
+    fn from(e: serde_json::Error) -> Self {
+        ClientError::Json(e)
+    }
+}
+
+impl From<io::Error> for ClientError {
+    fn from(e: io::Error) -> Self {
+        ClientError::Io(e)
+    }
+}
+
+impl From<ClientError> for io::Error {
+    fn from(e: ClientError) -> Self {
+        io::Error::new(io::ErrorKind::Other, format!("{}", e))
     }
 }

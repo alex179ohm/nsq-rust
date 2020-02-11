@@ -21,6 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/// Collections of cmds defined by the nsq protocol.
 use crate::codec::{Cls, Encoder, Fin, Req, Touch};
 use bytes::BytesMut;
 
