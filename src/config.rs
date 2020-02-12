@@ -127,26 +127,6 @@ fn get_hostname() -> Option<String> {
     None
 }
 
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            client_id: get_hostname(),
-            user_agent: String::from("rust nsq"),
-            hostname: get_hostname(),
-            deflate: false,
-            deflate_level: 6,
-            snappy: false,
-            tls_v1: true,
-            feature_negotiation: true,
-            heartbeat_interval: 30000,
-            message_timeout: 0,
-            output_buffer_size: 16384,
-            output_buffer_timeout: 250,
-            sample_rate: 0,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, PartialEq, Default)]
 pub struct NsqConfig {
     pub max_rdy_count: u32,
@@ -164,56 +144,129 @@ pub struct NsqConfig {
     pub output_buffer_timeout: u32,
 }
 
-#[allow(dead_code)]
-impl Config {
-    /// Create defaults [Config](struct.Config.html)
-    /// ```
-    /// let config = Config::new();
-    /// assert_eq!(config, Config::default());
-    /// ```
-    pub fn new() -> Config {
-        Config {
-            ..Default::default()
+pub struct ConfigBuilder {
+    client_id: Option<String>,
+    user_agent: String,
+    hostname: Option<String>,
+    deflate: bool,
+    deflate_level: u16,
+    snappy: bool,
+    tls_v1: bool,
+    feature_negotiation: bool,
+    heartbeat_interval: i64,
+    message_timeout: u32,
+    output_buffer_size: u64,
+    output_buffer_timeout: u32,
+    sample_rate: u16,
+}
+
+impl Default for ConfigBuilder {
+    fn default() -> Self {
+        Self {
+            client_id: get_hostname(),
+            user_agent: String::from("rust nsq"),
+            hostname: get_hostname(),
+            deflate: false,
+            deflate_level: 6,
+            snappy: false,
+            tls_v1: true,
+            feature_negotiation: true,
+            heartbeat_interval: 30000,
+            message_timeout: 0,
+            output_buffer_size: 16384,
+            output_buffer_timeout: 250,
+            sample_rate: 0,
         }
     }
+}
 
-    /// Change [client_id](struct.Config.html#structfield.client_id)
-    /// ```no-run
-    /// use nsq_client::Config;
-    ///
-    /// let config = Config::new().client_id("consumer");
-    /// assert_eq!(config.client_id, Some("consumer".to_owned()));
-    /// ```
-    pub fn client_id(mut self, client_id: &str) -> Self {
-        self.client_id = Some(client_id.to_owned());
+impl ConfigBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn client_id(mut self, id: Option<String>) -> ConfigBuilder {
+        self.client_id = id;
         self
     }
 
-    /// Change [hostname](struct.Config.html#structfield.hostname)
-    /// ```no-run
-    /// use nsq_client::Config;
-    ///
-    /// let config = Config::new().hostname("node-1");
-    /// assert_eq!(config.hostname, Some("node-1".to_owned()));
-    /// ```
-    pub fn hostname<H: Into<String>>(mut self, hostname: H) -> Self {
-        self.hostname = Some(hostname.into());
+    pub fn user_agent(mut self, ua: String) -> ConfigBuilder {
+        self.user_agent = ua;
         self
     }
 
-    /// Change [user_agent](struct.Config.html#structfield.user_agent)
-    /// ```no-run
-    /// use nsq_client::Config;
-    ///
-    /// let config = Config::new().user_agent("consumer-1");
-    /// assert_eq!(config.user_agent, Some("consumer-1".to_owned()));
-    /// ```
-    pub fn user_agent<UA: Into<String>>(mut self, user_agent: UA) -> Self {
-        self.user_agent = user_agent.into();
+    pub fn hostname(mut self, hostname: Option<String>) -> ConfigBuilder {
+        self.hostname = hostname;
         self
     }
 
-    pub fn tls_v1(&mut self, tls: bool) {
+    pub fn deflate(mut self, d: bool) -> ConfigBuilder {
+        self.deflate = d;
+        self
+    }
+
+    pub fn deflate_level(mut self, dl: u16) -> ConfigBuilder {
+        self.deflate_level = dl;
+        self
+    }
+
+    pub fn snappy(mut self, s: bool) -> ConfigBuilder {
+        self.snappy = s;
+        self
+    }
+
+    pub fn tls_v1(mut self, tls: bool) -> ConfigBuilder {
         self.tls_v1 = tls;
+        self
+    }
+
+    pub fn feature_negotiation(mut self, negotiation: bool) -> ConfigBuilder {
+        self.feature_negotiation = negotiation;
+        self
+    }
+
+    pub fn heartbeat_interval(mut self, interval: i64) -> ConfigBuilder {
+        self.heartbeat_interval = interval;
+        self
+    }
+
+    pub fn message_timeout(mut self, timeout: u32) -> ConfigBuilder {
+        self.message_timeout = timeout;
+        self
+    }
+
+    pub fn output_buffer_size(mut self, size: u64) -> ConfigBuilder {
+        self.output_buffer_size = size;
+        self
+    }
+
+    pub fn output_buffer_timeout(mut self, timeout: u32) -> ConfigBuilder {
+        self.output_buffer_timeout = timeout;
+        self
+    }
+
+    pub fn sample_rate(mut self, rate: u16) -> ConfigBuilder {
+        self.sample_rate = rate;
+        self
+    }
+}
+
+impl<'a> From<ConfigBuilder> for Config {
+    fn from(builder: ConfigBuilder) -> Config {
+        Config {
+            client_id: builder.client_id,
+            hostname: builder.hostname,
+            feature_negotiation: builder.feature_negotiation,
+            heartbeat_interval: builder.heartbeat_interval,
+            output_buffer_size: builder.output_buffer_size,
+            output_buffer_timeout: builder.output_buffer_timeout,
+            tls_v1: builder.tls_v1,
+            snappy: builder.snappy,
+            deflate: builder.deflate,
+            deflate_level: builder.deflate_level,
+            user_agent: builder.user_agent,
+            sample_rate: builder.sample_rate,
+            message_timeout: builder.message_timeout,
+        }
     }
 }

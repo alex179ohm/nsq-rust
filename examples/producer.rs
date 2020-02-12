@@ -10,7 +10,7 @@ async fn my_pub(_app: ()) -> Message {
 
 fn main() -> Result<(), Box<dyn Error>> {
     femme::start(log::LevelFilter::Debug)?;
-    let config = Config::new();
+    let config: Config = ConfigBuilder::new().into();
     //let cafile = PathBuf::from("./tests/end.chain");
     task::block_on(async move {
         let res = Client::new("localhost:4150", config, None, None)

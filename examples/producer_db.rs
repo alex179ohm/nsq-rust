@@ -25,7 +25,7 @@ async fn my_pub(app: App) -> Message {
 fn main() -> Result<(), Box<dyn Error>> {
     femme::start(log::LevelFilter::Trace)?;
 
-    let config = Config::new();
+    let config: Config = ConfigBuilder::new().into();
     let mut app = App::new();
 
     let _ = app.db.insert("test".to_owned(), "msg".to_owned());

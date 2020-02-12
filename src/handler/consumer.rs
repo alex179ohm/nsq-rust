@@ -26,6 +26,15 @@ use crate::msg::Msg;
 use futures::future::BoxFuture;
 use futures::Future;
 
+/// A [Msg](struct.Msg.heml) Handler.
+///
+/// This trait is implemented for [Fn](std/ops/trait.Fn.html) and is not meant
+/// to be used by end user if not in rare cases.
+///
+/// # Examples
+/// ```no-run
+/// async fn consumer(state: (), cx: Msg)
+/// ```
 pub trait Consumer<State>: Send + Sync + 'static {
     type Fut: Future<Output = Message> + Send + 'static;
     fn call(&self, state: State, cx: Msg) -> Self::Fut;

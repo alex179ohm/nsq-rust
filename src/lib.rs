@@ -34,5 +34,5 @@ mod utils;
 pub mod prelude {
     pub use crate::client::Client;
     pub use crate::codec::{Cls, Dpub, Fin, Message, Mpub, Pub, Req, Touch};
-    pub use crate::config::Config;
+    pub use crate::config::{Config, ConfigBuilder};
 }
