@@ -179,6 +179,7 @@ impl<State> Client<State> {
     }
 }
 
+#[doc(hidden)]
 async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> Result<TcpStream, ClientError> {
     debug!("Trying to connect to: {:?}", addr);
     match TcpStream::connect(addr).await {
