@@ -24,8 +24,8 @@
 use crate::config::ConfigResponse;
 use crate::conn;
 use crate::error::ClientError;
-use crate::handler::MsgHandler;
-use crate::handler::Publisher;
+use crate::handler::Handler;
+use crate::publisher::Publisher;
 use crate::msg::Msg;
 //use crate::codec::Message;
 use futures::{AsyncRead, AsyncWrite};
@@ -90,7 +90,7 @@ pub(crate) async fn consume<CHANNEL, TOPIC, S, State>(
     topic: TOPIC,
     rdy: u32,
     _state: State,
-    _future: impl MsgHandler<State>,
+    _future: impl Handler<State>,
 ) -> Result<(), ClientError>
 where
     CHANNEL: Into<String> + Display + Copy,

@@ -28,6 +28,7 @@ mod config;
 mod conn;
 mod error;
 mod handler;
+mod publisher;
 mod msg;
 
 pub mod prelude {
