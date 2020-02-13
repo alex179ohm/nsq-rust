@@ -1,4 +1,3 @@
-#[warn(clippy::pedantic)]
 // MIT License
 //
 // Copyright (c) 2019 Alessandro Cresto Miseroglio <alex179ohm@gmail.com>
@@ -13,7 +12,7 @@
 //
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-//
+//ext install TabNine.tabnine-vscode
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,16 +21,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-mod client;
-mod codec;
-mod config;
-mod conn;
-mod error;
-mod handler;
-mod msg;
+use crate::codec::Message;
+use crate::error::ClientError;
+use crate::msg::Msg;
+use async_std::prelude::*;
+use futures::{AsyncWrite, Stream};
 
-pub mod prelude {
-    pub use crate::client::Client;
-    pub use crate::codec::{Cls, Dpub, Fin, Message, Mpub, Pub, Req, Touch};
-    pub use crate::config::{Config, ConfigBuilder};
+pub async fn publish<S>(io: &mut S, msg: Message) -> Result<Msg, ClientError>
+where
+    S: AsyncWrite + Stream<Item = Result<Msg, ClientError>> + Unpin,
+{
+    if let Err(e) = io.write_all(&msg[..]).await {
+        return Err(ClientError::from(e));
+    }
+
+    io.next().await.unwrap()
 }

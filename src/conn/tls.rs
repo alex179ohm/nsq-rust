@@ -21,12 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::auth;
 use crate::config::ConfigResponse;
 use crate::conn;
 use crate::error::ClientError;
-use crate::handler::Consumer;
-use crate::handler::Publisher;
+use crate::handler::{Consumer, Publisher};
 use crate::msg::Msg;
 use async_std::net::TcpStream;
 use async_std::stream::StreamExt;
@@ -68,7 +66,7 @@ where
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
     if config.auth_required {
-        auth::authenticate(auth, &mut stream).await?;
+        conn::authenticate(auth, &mut stream).await?;
     }
     let res = conn::subscribe(&mut stream, channel, topic).await?;
     debug!("SUB: {} {}: {:?}", channel, topic, res);
@@ -99,7 +97,7 @@ pub(crate) async fn publish<State>(
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
     if config.auth_required {
-        auth::authenticate(auth, &mut stream).await?;
+        conn::authenticate(auth, &mut stream).await?;
     }
     let msg = future.call(state).await;
     stream.reset();

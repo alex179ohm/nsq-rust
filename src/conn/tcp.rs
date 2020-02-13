@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::auth;
 use crate::config::ConfigResponse;
 use crate::conn;
 use crate::error::ClientError;
@@ -49,7 +48,7 @@ where
     S: AsyncRead + AsyncWrite + Unpin,
 {
     if config.auth_required {
-        auth::authenticate(auth, stream).await?;
+        conn::authenticate(auth, stream).await?;
     }
     let res = conn::subscribe(stream, channel, topic).await?;
     debug!("SUB {} {}: {:?}", channel, topic, res);
@@ -69,7 +68,7 @@ where
     S: AsyncWrite + AsyncRead + Unpin,
 {
     if config.auth_required {
-        auth::authenticate(auth, stream).await?;
+        conn::authenticate(auth, stream).await?;
     }
     let msg = future.call(state).await;
     stream.reset();
