@@ -22,9 +22,8 @@
 // SOFTWARE.
 
 use crate::error::ClientError;
-use crate::io::NsqIO;
+use crate::conn;
 use crate::msg::Msg;
-use crate::utils;
 use futures::{AsyncRead, AsyncWrite};
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -76,7 +75,7 @@ pub struct AuthResponse {
 /// ```
 pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
     auth: Option<String>,
-    stream: &mut NsqIO<'_, S>,
+    stream: &mut conn::NsqStream<'_, S>,
 ) -> Result<AuthResponse, ClientError> {
     if auth.is_none() {
         return Err(io::Error::new(
@@ -89,7 +88,7 @@ pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
     let auth_token = auth.unwrap();
     stream.reset();
 
-    match utils::auth(stream, auth_token).await? {
+    match conn::auth(stream, auth_token).await? {
         Msg::Json(s) => {
             let auth: AuthResponse = serde_json::from_str(&s)?;
             debug!("AUTH: {:?}", auth);

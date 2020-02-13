@@ -25,7 +25,7 @@ use crate::config::{Config, ConfigResponse};
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
-use crate::io::{tcp, tls, NsqIO};
+use crate::conn;
 use crate::msg::Msg;
 use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
@@ -93,11 +93,11 @@ impl<State> Client<State> {
     {
         let mut tcp_stream = connect(self.addr.clone()).await?;
 
-        if let Err(e) = utils::magic(&mut tcp_stream).await {
+        if let Err(e) = conn::magic(&mut tcp_stream).await {
             return Err(e);
         }
 
-        let mut stream = NsqIO::new(&mut tcp_stream, 1024);
+        let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
 
         let resp = match utils::identify(&mut stream, self.config.clone()).await {
             Ok(Msg::Json(s)) => s,
@@ -115,7 +115,7 @@ impl<State> Client<State> {
         debug!("Configuration OK: {:?}", nsqd_cfg);
 
         if nsqd_cfg.tls_v1 {
-            tls::consumer(
+            conn::tls::consumer(
                 self.addr,
                 self.auth,
                 nsqd_cfg,
@@ -128,7 +128,7 @@ impl<State> Client<State> {
             )
             .await
         } else {
-            tcp::consumer(
+            conn::tcp::consumer(
                 self.auth,
                 nsqd_cfg,
                 &mut stream,
@@ -145,9 +145,9 @@ impl<State> Client<State> {
     pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, ClientError> {
 
         let mut tcp_stream = connect(self.addr.clone()).await?;
-        let mut stream = NsqIO::new(&mut tcp_stream, 1024);
+        let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
 
-        if let Err(e) = utils::magic(&mut stream).await {
+        if let Err(e) = conn::magic(&mut stream).await {
             return Err(e);
         }
 
@@ -163,7 +163,7 @@ impl<State> Client<State> {
         info!("Configuration OK: {:?}", nsqd_cfg);
 
         if nsqd_cfg.tls_v1 {
-            tls::publish(
+            conn::tls::publish(
                 self.addr,
                 self.state,
                 self.cafile,
@@ -174,7 +174,7 @@ impl<State> Client<State> {
             )
             .await
         } else {
-            tcp::publish(self.auth, nsqd_cfg, &mut stream, self.state, future).await
+            conn::tcp::publish(self.auth, nsqd_cfg, &mut stream, self.state, future).await
         }
     }
 }

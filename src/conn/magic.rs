@@ -1,4 +1,3 @@
-#[warn(clippy::pedantic)]
 // MIT License
 //
 // Copyright (c) 2019 Alessandro Cresto Miseroglio <alex179ohm@gmail.com>
@@ -21,18 +20,18 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-mod auth;
-mod client;
-mod codec;
-mod config;
-mod error;
-mod handler;
-mod conn;
-mod msg;
-mod utils;
 
-pub mod prelude {
-    pub use crate::client::Client;
-    pub use crate::codec::{Cls, Dpub, Fin, Message, Mpub, Pub, Req, Touch};
-    pub use crate::config::{Config, ConfigBuilder};
+use crate::error::ClientError;
+use crate::codec::{Message, Magic};
+use async_std::io::prelude::*;
+
+/// Send the [Magic](struct.Magic.html) to the nsqd server.
+pub async fn magic<IO: Write + Unpin>(io: &mut IO) -> Result<(), ClientError> {
+    let buf: Message = Magic {}.into();
+
+    if let Err(e) = io.write_all(&buf[..]).await {
+        return Err(ClientError::from(e));
+    };
+
+    Ok(())
 }

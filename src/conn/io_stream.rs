@@ -21,9 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-pub mod tcp;
-pub mod tls;
-
 use crate::codec::decode_msg;
 use crate::error::ClientError;
 use crate::msg::Msg;
@@ -43,13 +40,13 @@ use std::{
 
 const HEADER_SIZE: usize = 8;
 
-pub struct NsqIO<'a, S> {
+pub struct NsqStream<'a, S> {
     stream: &'a mut S,
     read_buffer: BytesMut,
     exit: bool,
 }
 
-impl<'a, S> NsqIO<'a, S> {
+impl<'a, S> NsqStream<'a, S> {
     pub fn new(stream: &'a mut S, max_size: usize) -> Self {
         Self {
             stream,
@@ -63,7 +60,7 @@ impl<'a, S> NsqIO<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
+impl<'a, S: AsyncRead + Unpin> Stream for NsqStream<'a, S> {
     type Item = Result<Msg, ClientError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -122,7 +119,7 @@ impl<'a, S: AsyncRead + Unpin> Stream for NsqIO<'a, S> {
     }
 }
 
-impl<'a, S: AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
+impl<'a, S: AsyncWrite + Unpin> AsyncWrite for NsqStream<'a, S> {
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -143,7 +140,7 @@ impl<'a, S: AsyncWrite + Unpin> AsyncWrite for NsqIO<'a, S> {
     }
 }
 
-impl<'a, S: AsyncRead + Unpin> AsyncRead for NsqIO<'a, S> {
+impl<'a, S: AsyncRead + Unpin> AsyncRead for NsqStream<'a, S> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

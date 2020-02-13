@@ -1,4 +1,3 @@
-#[warn(clippy::pedantic)]
 // MIT License
 //
 // Copyright (c) 2019 Alessandro Cresto Miseroglio <alex179ohm@gmail.com>
@@ -13,7 +12,7 @@
 //
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-//
+//ext install TabNine.tabnine-vscode
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,18 +20,13 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-mod auth;
-mod client;
-mod codec;
-mod config;
-mod error;
-mod handler;
-mod conn;
-mod msg;
-mod utils;
 
-pub mod prelude {
-    pub use crate::client::Client;
-    pub use crate::codec::{Cls, Dpub, Fin, Message, Mpub, Pub, Req, Touch};
-    pub use crate::config::{Config, ConfigBuilder};
-}
+pub mod tcp;
+pub mod tls;
+mod io_stream;
+mod magic;
+mod auth;
+
+pub use io_stream::NsqStream;
+pub(crate) use magic::magic;
+pub(crate) use auth::auth;

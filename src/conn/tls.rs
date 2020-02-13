@@ -3,7 +3,7 @@ use crate::config::ConfigResponse;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
-use crate::io::NsqIO;
+use super::NsqStream;
 use crate::msg::Msg;
 use crate::utils;
 use async_std::net::TcpStream;
@@ -42,7 +42,7 @@ where
         TlsConnector::new()
     };
     let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-    let mut stream = NsqIO::new(&mut tls_stream, 1024);
+    let mut stream = NsqStream::new(&mut tls_stream, 1024);
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
     if config.auth_required {
@@ -73,7 +73,7 @@ pub(crate) async fn publish<State>(
         TlsConnector::new()
     };
     let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-    let mut stream = NsqIO::new(&mut tls_stream, 1024);
+    let mut stream = NsqStream::new(&mut tls_stream, 1024);
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
     if config.auth_required {

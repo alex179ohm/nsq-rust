@@ -21,24 +21,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Auth, Identify, Magic, Message, Rdy, Sub};
+use crate::codec::{Identify, Message, Rdy, Sub};
 use crate::config::Config;
 use crate::error::ClientError;
 use crate::msg::Msg;
 use async_std::io::prelude::*;
 use async_std::stream::StreamExt;
 use futures::Stream;
-
-/// Send the [Magic](struct.Magic.html) to the nsqd server.
-pub(crate) async fn magic<IO: Write + Unpin>(io: &mut IO) -> Result<(), ClientError> {
-    let buf: Message = Magic {}.into();
-
-    if let Err(e) = io.write_all(&buf[..]).await {
-        return Err(ClientError::from(e));
-    };
-
-    Ok(())
-}
 
 /// Send the [Identify](struct.Identify.html) *msg* to nsqd, and return the
 pub(crate) async fn identify<IO>(
@@ -50,23 +39,6 @@ where
 {
     let msg_string = serde_json::to_string(&config)?;
     let buf: Message = Identify::new(msg_string.as_str()).into();
-
-    if let Err(e) = io.write_all(&buf[..]).await {
-        return Err(ClientError::from(e));
-    };
-
-    io.next().await.unwrap()
-}
-
-pub(crate) async fn auth<IO, AUTH>(
-    io: &mut IO,
-    auth: AUTH
-) -> Result<Msg, ClientError>
-where
-    IO: Write + Stream<Item = Result<Msg, ClientError>> + Unpin,
-    AUTH: Into<String>,
-{
-    let buf: Message = Auth::new(auth.into().as_str()).into();
 
     if let Err(e) = io.write_all(&buf[..]).await {
         return Err(ClientError::from(e));

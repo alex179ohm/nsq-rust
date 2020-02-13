@@ -29,97 +29,27 @@ use std::path::PathBuf;
 ///
 /// # Examples
 ///```
-/// //let config = Config::new().client_id("consumer").user_agent("node-1");
+/// //let config: Config = ConfigBuilder::new().client_id("consumer").user_agent("node-1").into();
 /// //println!("{:?}", config);
 ///```
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-    /// Identifiers sent to nsqd representing this client (consumer specific)
-    ///
-    /// Default: **hostname** where connection is started
     pub client_id: Option<String>,
-
-    /// Hostname where client is deployed.
-    ///
-    /// Default: **hostname** where connection is started
     pub hostname: Option<String>,
-
-    /// Enable feature_negotiation
-    ///
-    /// Default: **true**
     pub feature_negotiation: bool,
-
-    /// Duration of time between heartbeats (milliseconds).
-    ///
-    /// Valid values:
-    /// * -1 disables heartbeats
-    /// * 1000 <= heartbeat_interval <= configured_max
-    ///
-    /// Default: **30000**
     pub heartbeat_interval: i64,
-
-    /// Size of the buffer (in bytes) used by nsqd for buffering writes to this
-    /// connection
-    ///
-    /// Valid values:
-    /// * -1 disable output buffer
-    /// * 64 <= output_buffer_size <= configured_max
-    ///
-    /// Default: **16384**
     pub output_buffer_size: u64,
-
-    /// The timeout after which data nsqd has buffered will be flushed to this
-    /// client.
-    ///
-    /// Valid values:
-    /// * -1 disable buffer timeout
-    /// * 1ms <= output_buffer_timeout <= configured_max
-    ///
-    /// Default: **250**
     pub output_buffer_timeout: u32,
-
-    /// Enable TLS negotiation
-    ///
-    /// Default: **false** (Not implemented)
     tls_v1: bool,
-
-    /// Enable snappy compression.
-    ///
-    /// Default: **false** (Not implemented)
     pub snappy: bool,
-
-    /// Enable deflate compression.
-    ///
-    /// Default: **false** (Not implemented)
     deflate: bool,
-    /// Configure deflate compression level.
-    ///
-    /// Valid range:
-    /// * 1 <= deflate_level <= configured_max
-    ///
-    /// Default: **6**
     deflate_level: u16,
-
-    /// Integer percentage to sample the channel.
-    ///
-    /// Deliver a perventage of all messages received to this connection.
-    ///
-    /// Default: **0**
     pub sample_rate: u16,
-
-    /// String indentifying the agent for this connection.
-    ///
-    /// Default: **hostname** where connection is started
     pub user_agent: String,
-
-    /// Timeout used by nsqd before flushing buffered writes (set to 0 to disable).
-    ///
-    /// Default: **0**
     pub message_timeout: u32,
-
     #[serde(skip)]
     cafile: Option<PathBuf>,
-
     #[serde(skip)]
     auth: Option<String>,
 }
@@ -196,66 +126,124 @@ impl ConfigBuilder {
         Self::default()
     }
 
+    /// Identifiers sent to nsqd representing this client (consumer specific)
+    ///
+    /// Default: **hostname** where connection is started
     pub fn client_id(mut self, id: Option<String>) -> ConfigBuilder {
         self.client_id = id;
         self
     }
 
+    /// String indentifying the agent for this connection.
+    ///
+    /// Default: **hostname** where connection is started
     pub fn user_agent(mut self, ua: String) -> ConfigBuilder {
         self.user_agent = ua;
         self
     }
 
+    /// Hostname where client is deployed.
+    ///
+    /// Default: **hostname** where connection is started
     pub fn hostname(mut self, hostname: Option<String>) -> ConfigBuilder {
         self.hostname = hostname;
         self
     }
 
+    /// Enable deflate compression.
+    ///
+    /// Default: **false** (Not implemented)
     pub fn deflate(mut self, d: bool) -> ConfigBuilder {
         self.deflate = d;
         self
     }
 
+    /// Configure deflate compression level.
+    ///
+    /// Valid range:
+    /// * 1 <= deflate_level <= configured_max
+    ///
+    /// Default: **6**
     pub fn deflate_level(mut self, dl: u16) -> ConfigBuilder {
         self.deflate_level = dl;
         self
     }
 
+    /// Enable snappy compression.
+    ///
+    /// Default: **false** (Not implemented)
     pub fn snappy(mut self, s: bool) -> ConfigBuilder {
         self.snappy = s;
         self
     }
 
+    /// Enable TLS negotiation
+    ///
+    /// Default: **false** (Not implemented)
     pub fn tls_v1(mut self, tls: bool) -> ConfigBuilder {
         self.tls_v1 = tls;
         self
     }
 
+    /// Enable feature_negotiation
+    ///
+    /// Default: **true**
     pub fn feature_negotiation(mut self, negotiation: bool) -> ConfigBuilder {
         self.feature_negotiation = negotiation;
         self
    }
 
+    /// Duration of time between heartbeats (milliseconds).
+    ///
+    /// Valid values:
+    /// * -1 disables heartbeats
+    /// * 1000 <= heartbeat_interval <= configured_max
+    ///
+    /// Default: **30000**
     pub fn heartbeat_interval(mut self, interval: i64) -> ConfigBuilder {
         self.heartbeat_interval = interval;
         self
     }
 
+    /// Timeout used by nsqd before flushing buffered writes (set to 0 to disable).
+    ///
+    /// Default: **0**
     pub fn message_timeout(mut self, timeout: u32) -> ConfigBuilder {
         self.message_timeout = timeout;
         self
     }
 
+    /// Size of the buffer (in bytes) used by nsqd for buffering writes to this
+    /// connection
+    ///
+    /// Valid values:
+    /// * -1 disable output buffer
+    /// * 64 <= output_buffer_size <= configured_max
+    ///
+    /// Default: **16384**
     pub fn output_buffer_size(mut self, size: u64) -> ConfigBuilder {
         self.output_buffer_size = size;
         self
     }
 
+    /// The timeout after which data nsqd has buffered will be flushed to this
+    /// client.
+    ///
+    /// Valid values:
+    /// * -1 disable buffer timeout
+    /// * 1ms <= output_buffer_timeout <= configured_max
+    ///
+    /// Default: **250**
     pub fn output_buffer_timeout(mut self, timeout: u32) -> ConfigBuilder {
         self.output_buffer_timeout = timeout;
         self
     }
 
+    /// Integer percentage to sample the channel.
+    ///
+    /// Deliver a perventage of all messages received to this connection.
+    ///
+    /// Default: **0**
     pub fn sample_rate(mut self, rate: u16) -> ConfigBuilder {
         self.sample_rate = rate;
         self
