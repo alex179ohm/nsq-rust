@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn consumer<CHANNEL, TOPIC, State>(
+pub(crate) async fn consume<CHANNEL, TOPIC, State>(
     addr: String,
     auth: Option<String>,
     config: ConfigResponse,

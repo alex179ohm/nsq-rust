@@ -34,7 +34,7 @@ use log::debug;
 use std::fmt::Display;
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn consumer<CHANNEL, TOPIC, S, State>(
+pub(crate) async fn consume<CHANNEL, TOPIC, S, State>(
     auth: Option<String>,
     config: ConfigResponse,
     stream: &mut NsqStream<'_, S>,

@@ -115,7 +115,7 @@ impl<State> Client<State> {
         debug!("Configuration OK: {:?}", nsqd_cfg);
 
         if nsqd_cfg.tls_v1 {
-            conn::tls::consumer(
+            conn::tls::consume(
                 self.addr,
                 self.auth,
                 nsqd_cfg,
@@ -128,7 +128,7 @@ impl<State> Client<State> {
             )
             .await
         } else {
-            conn::tcp::consumer(
+            conn::tcp::consume(
                 self.auth,
                 nsqd_cfg,
                 &mut stream,
