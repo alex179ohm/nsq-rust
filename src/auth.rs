@@ -30,32 +30,76 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use std::io;
 
-/// Authentication response sent by nsqd to the client after the AUTH command.
+/// The authentication response received by nsqd.
+///
+/// Version required: nsqd v0.2.19+
+///
+/// As described by the [Nsq protocol specification](https://nsq.io/clients/tcp_protocol_spec.html#auth)
+/// it contains the client's identity, an optional url and a count of permission which were
+/// authorized by the eventually external authentication service.
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Reply {
-    identity: String,
-    identity_url: Option<String>,
-    permission_count: i32,
+pub struct AuthResponse {
+    /// client's identity received by nsqd Json success response.
+    pub identity: String,
+    /// Optional identity url received by nsqd Json success response to AUTH message.
+    pub identity_url: Option<String>,
+    /// Permission_count received by nsqd Json success response to AUTH message.
+    ///
+    /// Even if not specified by both [nsqd protocol specification](https://nsq.io/clients/tcp_protocol_spec.html#auth)
+    /// or the [nsqd documentation](https://nsq.io/clients/tcp_protocol_spec.html#auth) it is
+    /// supposed that permission_count is just a merely count of permissions granted by the
+    /// eventually external authentication service.
+    ///
+    /// Simply like:
+    /// - permissions_granted: [subscribe, publish] -> permission_count: 2
+    /// - permissions_granted: [subscribe] -> permission_count: 1
+    pub permission_count: i32,
 }
 
+/// Synchronously sends the [AUTH](https://nsq.io/clients/tcp_protocol_spec.html#auth) message
+/// and waits for the nsqd response.
+///
+/// This function is just called if the client and nsqd are both configured to performs
+/// authentication.
+///
+/// Even if nsqd responds with and error or with an invalid response the error returned is a
+/// [ClientError::Io](enum.ClientError.html).
+///
+/// Obiuvsly on success it returns [AuthResponse](struct.AuthResponse.html).
+///
+/// # Example
+/// ```no-run
+/// match authenticate(Some(auth_string), nsq_io_stream) {
+///     Ok(msg) => println!("{}", msg),
+///     Err(e) => eprintln!("{}", e),
+/// }
+/// ```
 pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
     auth: Option<String>,
     stream: &mut NsqIO<'_, S>,
-) -> Result<(), ClientError> {
+) -> Result<AuthResponse, ClientError> {
     if auth.is_none() {
         return Err(io::Error::new(
             io::ErrorKind::Other,
             "When configured with auth, authentication token must be provided",
         )
         .into());
-    }
+    };
 
     let auth_token = auth.unwrap();
     stream.reset();
 
-    if let Msg::Json(s) = utils::auth(stream, auth_token).await? {
-        let auth: Reply = serde_json::from_str(&s)?;
-        debug!("AUTH: {:?}", auth);
+    match utils::auth(stream, auth_token).await? {
+        Msg::Json(s) => {
+            let auth: AuthResponse = serde_json::from_str(&s)?;
+            debug!("AUTH: {:?}", auth);
+            return Ok(auth);
+        },
+        s => {
+            return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("AUTH msg received an invalid response: {:?}", s)
+            ).into());
+        }
     }
-    Ok(())
 }

@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::config::{Config, NsqConfig};
+use crate::config::{Config, NsqConfig, ConfigBuilder};
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
