@@ -24,7 +24,7 @@
 use crate::config::{Config, ConfigResponse};
 use crate::conn;
 use crate::error::ClientError;
-use crate::handler::Consumer;
+use crate::handler::MsgHandler;
 use crate::handler::Publisher;
 use crate::msg::Msg;
 use async_std::net::{TcpStream, ToSocketAddrs};
@@ -84,7 +84,7 @@ impl<State> Client<State> {
         self,
         channel: CHANNEL,
         topic: TOPIC,
-        _future: impl Consumer<State>,
+        _future: impl MsgHandler<State>,
     ) -> Result<(), ClientError>
     where
         CHANNEL: Into<String> + Display + Copy,

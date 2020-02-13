@@ -24,7 +24,7 @@
 use crate::config::ConfigResponse;
 use crate::conn;
 use crate::error::ClientError;
-use crate::handler::{Consumer, Publisher};
+use crate::handler::{MsgHandler, Publisher};
 use crate::msg::Msg;
 use async_std::net::TcpStream;
 use async_std::stream::StreamExt;
@@ -47,7 +47,7 @@ pub(crate) async fn consume<CHANNEL, TOPIC, State>(
     channel: CHANNEL,
     topic: TOPIC,
     rdy: u32,
-    _future: impl Consumer<State>,
+    _future: impl MsgHandler<State>,
 ) -> Result<(), ClientError>
 where
     CHANNEL: Into<String> + Copy + Display,

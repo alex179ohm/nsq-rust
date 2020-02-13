@@ -35,14 +35,14 @@ use futures::Future;
 /// ```no-run
 /// async fn consumer(state: (), cx: Msg)
 /// ```
-pub trait Consumer<State>: Send + Sync + 'static {
+pub trait MsgHandler<State>: Send + Sync + 'static {
     type Fut: Future<Output = Message> + Send + 'static;
     fn call(&self, state: State, cx: Msg) -> Self::Fut;
 }
 
 //pub(crate) type DynConsumer = dyn (Fn(Msg) -> BoxFuture<'static, Message>) + Send + Sync + 'static;
 
-impl<F: Send + Sync + 'static, Fut, State> Consumer<State> for F
+impl<F: Send + Sync + 'static, Fut, State> MsgHandler<State> for F
 where
     F: Fn(State, Msg) -> Fut,
     Fut: Future + Send + 'static,

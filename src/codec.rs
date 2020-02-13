@@ -212,15 +212,15 @@ impl From<Dpub> for Message {
     }
 }
 
-pub struct Touch(String);
+pub struct Touch<'a>(&'a str);
 
-impl Touch {
-    pub fn new(id: String) -> Self {
+impl<'a> Touch<'a> {
+    pub fn new(id: &'a str) -> Self {
         Touch(id)
     }
 }
 
-impl From<Touch> for Message {
+impl From<Touch<'_>> for Message {
     fn from(touch: Touch) -> Self {
         let mut buf = Vec::with_capacity(touch.0.len() + 7);
         buf.extend_from_slice(&[&b"TOUCH "[..], touch.0.as_bytes(), &b"\n"[..]].concat());
@@ -228,15 +228,15 @@ impl From<Touch> for Message {
     }
 }
 
-pub struct Fin(String);
+pub struct Fin<'a>(&'a str);
 
-impl Fin {
-    pub fn new(id: String) -> Self {
+impl<'a> Fin<'a> {
+    pub fn new(id: &'a str) -> Self {
         Fin(id)
     }
 }
 
-impl From<Fin> for Message {
+impl From<Fin<'_>> for Message {
     fn from(fin: Fin) -> Self {
         let mut buf = Vec::with_capacity(fin.0.len() + 5);
         buf.extend_from_slice(&[&b"FIN "[..], fin.0.as_bytes(), &b"\n"[..]].concat());
@@ -244,23 +244,24 @@ impl From<Fin> for Message {
     }
 }
 
-pub struct Req(String, String);
+pub struct Req<'a>(&'a str, u32);
 
-impl Req {
-    pub fn new(id: String, timeout: u32) -> Self {
-        Req(id, timeout.to_string())
+impl<'a> Req<'a> {
+    pub fn new(id: &'a str, timeout: u32) -> Self {
+        Req(id, timeout)
     }
 }
 
-impl From<Req> for Message {
+impl From<Req<'_>> for Message {
     fn from(req: Req) -> Self {
-        let mut buf = Vec::with_capacity(req.0.len() + req.1.len() + 6);
+        let timeout = req.1.to_string();
+        let mut buf = Vec::with_capacity(req.0.len() + timeout.len() + 6);
         buf.extend_from_slice(
             &[
                 &b"REQ "[..],
                 req.0.as_bytes(),
                 &b" "[..],
-                req.1.as_bytes(),
+                timeout.as_bytes(),
                 &b"\n"[..],
             ]
             .concat(),

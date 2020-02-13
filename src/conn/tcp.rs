@@ -24,12 +24,62 @@
 use crate::config::ConfigResponse;
 use crate::conn;
 use crate::error::ClientError;
-use crate::handler::Consumer;
+use crate::handler::MsgHandler;
 use crate::handler::Publisher;
 use crate::msg::Msg;
+//use crate::codec::Message;
 use futures::{AsyncRead, AsyncWrite};
 use log::debug;
 use std::fmt::Display;
+//use crossbeam_channel::{Sender, Receiver, unbounded};
+
+pub(crate) struct TcpConnection {
+    auth: Option<String>,
+    config: ConfigResponse,
+    channel: String,
+    topic: String,
+    rdy: u32,
+}
+
+impl Default for TcpConnection {
+    fn default() -> TcpConnection {
+        TcpConnection {
+            auth: None,
+            config: ConfigResponse::default(),
+            channel: String::new(),
+            topic: String::new(),
+            rdy: 0u32,
+        }
+    }
+}
+
+#[allow(dead_code)]
+impl TcpConnection {
+    pub fn new() -> TcpConnection {
+        TcpConnection { ..Default::default() }
+    }
+
+    pub fn auth(mut self, auth: Option<String>) -> TcpConnection {
+        self.auth = auth;
+        self
+    }
+
+    pub fn config(mut self, cfg: ConfigResponse) -> TcpConnection {
+        self.config = cfg;
+        self
+    }
+
+    pub fn channel(mut self, channel: String, topic: String) -> TcpConnection {
+        self.channel = channel;
+        self.topic = topic;
+        self
+    }
+
+    pub fn rdy(mut self, rdy: u32) -> TcpConnection {
+        self.rdy = rdy;
+        self
+    }
+}
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn consume<CHANNEL, TOPIC, S, State>(
@@ -40,7 +90,7 @@ pub(crate) async fn consume<CHANNEL, TOPIC, S, State>(
     topic: TOPIC,
     rdy: u32,
     _state: State,
-    _future: impl Consumer<State>,
+    _future: impl MsgHandler<State>,
 ) -> Result<(), ClientError>
 where
     CHANNEL: Into<String> + Display + Copy,

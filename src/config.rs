@@ -52,6 +52,12 @@ pub struct Config {
     cafile: Option<PathBuf>,
     #[serde(skip)]
     auth: Option<String>,
+    #[serde(skip)]
+    channel: Option<String>,
+    #[serde(skip)]
+    topic: Option<String>,
+    #[serde(skip)]
+    rdy: u32,
 }
 
 fn get_hostname() -> Option<String> {
@@ -97,6 +103,9 @@ pub struct ConfigBuilder {
     sample_rate: u16,
     cafile: Option<PathBuf>,
     auth: Option<String>,
+    channel: Option<String>,
+    topic: Option<String>,
+    rdy: u32,
 }
 
 impl Default for ConfigBuilder {
@@ -117,6 +126,9 @@ impl Default for ConfigBuilder {
             sample_rate: 0,
             cafile: None,
             auth: None,
+            channel: None,
+            topic: None,
+            rdy: 0,
         }
     }
 }
@@ -260,6 +272,21 @@ impl ConfigBuilder {
         self.auth = Some(auth.into());
         self
     }
+
+    pub fn channel<C, T>(mut self, channel: C, topic: T) -> ConfigBuilder
+    where
+        C: Into<String>,
+        T: Into<String>,
+    {
+        self.channel = Some(channel.into());
+        self.topic = Some(topic.into());
+        self
+    }
+
+    pub fn rdy(mut self, rdy: u32) -> ConfigBuilder {
+        self.rdy = rdy;
+        self
+    }
 }
 
 impl From<ConfigBuilder> for Config {
@@ -280,6 +307,9 @@ impl From<ConfigBuilder> for Config {
             message_timeout: builder.message_timeout,
             cafile: builder.cafile,
             auth: builder.auth,
+            channel: builder.channel,
+            topic: builder.topic,
+            rdy: builder.rdy,
         }
     }
 }
