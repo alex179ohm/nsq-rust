@@ -22,13 +22,12 @@
 // SOFTWARE.
 
 use crate::auth;
+use crate::conn;
 use crate::config::ConfigResponse;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
-use super::NsqStream;
 use crate::msg::Msg;
-use crate::utils;
 use async_std::net::TcpStream;
 use async_std::stream::StreamExt;
 use async_tls::TlsConnector;
@@ -65,15 +64,15 @@ where
         TlsConnector::new()
     };
     let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-    let mut stream = NsqStream::new(&mut tls_stream, 1024);
+    let mut stream = conn::NsqStream::new(&mut tls_stream, 1024);
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
     if config.auth_required {
         auth::authenticate(auth, &mut stream).await?;
     }
-    let res = utils::sub(&mut stream, channel, topic).await?;
+    let res = conn::subscribe(&mut stream, channel, topic).await?;
     debug!("SUB: {} {}: {:?}", channel, topic, res);
-    utils::rdy(&mut stream, rdy).await?;
+    conn::rdy(&mut stream, rdy).await?;
     debug!("RDY {}", rdy);
     Ok(())
 }
@@ -96,7 +95,7 @@ pub(crate) async fn publish<State>(
         TlsConnector::new()
     };
     let mut tls_stream = connector.connect(addr[0], stream).unwrap().await?;
-    let mut stream = NsqStream::new(&mut tls_stream, 1024);
+    let mut stream = conn::NsqStream::new(&mut tls_stream, 1024);
     stream.next().await.unwrap()?;
     debug!("TLS Ok");
     if config.auth_required {
@@ -104,7 +103,7 @@ pub(crate) async fn publish<State>(
     }
     let msg = future.call(state).await;
     stream.reset();
-    utils::io_publish(&mut stream, msg).await
+    conn::publish(&mut stream, msg).await
 }
 
 async fn connector_from_cafile(cafile: &Path) -> io::Result<TlsConnector> {

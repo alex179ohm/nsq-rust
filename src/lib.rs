@@ -29,7 +29,6 @@ mod error;
 mod handler;
 mod conn;
 mod msg;
-mod utils;
 
 pub mod prelude {
     pub use crate::client::Client;

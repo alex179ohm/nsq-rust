@@ -21,14 +21,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use super::NsqStream;
+use crate::conn;
 use crate::auth;
 use crate::config::ConfigResponse;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
 use crate::msg::Msg;
-use crate::utils;
 use futures::{AsyncRead, AsyncWrite};
 use log::debug;
 use std::fmt::Display;
@@ -37,7 +36,7 @@ use std::fmt::Display;
 pub(crate) async fn consume<CHANNEL, TOPIC, S, State>(
     auth: Option<String>,
     config: ConfigResponse,
-    stream: &mut NsqStream<'_, S>,
+    stream: &mut conn::NsqStream<'_, S>,
     channel: CHANNEL,
     topic: TOPIC,
     rdy: u32,
@@ -52,9 +51,9 @@ where
     if config.auth_required {
         auth::authenticate(auth, stream).await?;
     }
-    let res = utils::sub(stream, channel, topic).await?;
+    let res = conn::subscribe(stream, channel, topic).await?;
     debug!("SUB {} {}: {:?}", channel, topic, res);
-    utils::rdy(stream, rdy).await?;
+    conn::rdy(stream, rdy).await?;
     debug!("RDY {}", rdy);
     Ok(())
 }
@@ -62,7 +61,7 @@ where
 pub(crate) async fn publish<S, State>(
     auth: Option<String>,
     config: ConfigResponse,
-    stream: &mut NsqStream<'_, S>,
+    stream: &mut conn::NsqStream<'_, S>,
     state: State,
     future: impl Publisher<State>,
 ) -> Result<Msg, ClientError>
@@ -74,5 +73,5 @@ where
     }
     let msg = future.call(state).await;
     stream.reset();
-    utils::io_publish(stream, msg).await
+    conn::publish(stream, msg).await
 }

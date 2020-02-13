@@ -27,7 +27,6 @@ use crate::handler::Consumer;
 use crate::handler::Publisher;
 use crate::conn;
 use crate::msg::Msg;
-use crate::utils;
 use async_std::net::{TcpStream, ToSocketAddrs};
 use log::{debug, info};
 use std::fmt::{Debug, Display};
@@ -99,7 +98,7 @@ impl<State> Client<State> {
 
         let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
 
-        let resp = match utils::identify(&mut stream, self.config.clone()).await {
+        let resp = match conn::identify(&mut stream, self.config.clone()).await {
             Ok(Msg::Json(s)) => s,
             Ok(r) => {
                 return Err(ClientError::from(std::io::Error::new(
@@ -152,7 +151,7 @@ impl<State> Client<State> {
         }
 
         let nsqd_cfg: ConfigResponse;
-        match utils::identify(&mut stream, self.config.clone()).await {
+        match conn::identify(&mut stream, self.config.clone()).await {
             Ok(Msg::Json(s)) => {
                 nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error")
             }
