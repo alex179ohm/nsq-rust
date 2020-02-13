@@ -21,16 +21,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::msg::Msg;
+use crate::codec::{Auth, Message};
 use crate::error::ClientError;
-use crate::codec::{Message, Auth};
+use crate::msg::Msg;
 use async_std::prelude::*;
-use futures::{Stream, AsyncWrite};
+use futures::{AsyncWrite, Stream};
 
-pub(crate) async fn auth<IO, AUTH>(
-    io: &mut IO,
-    auth: AUTH
-) -> Result<Msg, ClientError>
+pub(crate) async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH) -> Result<Msg, ClientError>
 where
     IO: AsyncWrite + Stream<Item = Result<Msg, ClientError>> + Unpin,
     AUTH: Into<String>,

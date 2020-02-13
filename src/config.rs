@@ -191,7 +191,7 @@ impl ConfigBuilder {
     pub fn feature_negotiation(mut self, negotiation: bool) -> ConfigBuilder {
         self.feature_negotiation = negotiation;
         self
-   }
+    }
 
     /// Duration of time between heartbeats (milliseconds).
     ///

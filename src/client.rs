@@ -22,10 +22,10 @@
 // SOFTWARE.
 
 use crate::config::{Config, ConfigResponse};
+use crate::conn;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
-use crate::conn;
 use crate::msg::Msg;
 use async_std::net::{TcpStream, ToSocketAddrs};
 use log::{debug, info};
@@ -142,7 +142,6 @@ impl<State> Client<State> {
     }
 
     pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, ClientError> {
-
         let mut tcp_stream = connect(self.addr.clone()).await?;
         let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
 

@@ -21,8 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use crate::codec::{Magic, Message};
 use crate::error::ClientError;
-use crate::codec::{Message, Magic};
 use async_std::io::prelude::*;
 
 /// Send the [Magic](struct.Magic.html) to the nsqd server.

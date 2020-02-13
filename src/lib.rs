@@ -25,9 +25,9 @@ mod auth;
 mod client;
 mod codec;
 mod config;
+mod conn;
 mod error;
 mod handler;
-mod conn;
 mod msg;
 
 pub mod prelude {

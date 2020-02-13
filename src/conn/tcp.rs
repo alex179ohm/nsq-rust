@@ -21,9 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::conn;
 use crate::auth;
 use crate::config::ConfigResponse;
+use crate::conn;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;

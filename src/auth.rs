@@ -21,8 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::error::ClientError;
 use crate::conn;
+use crate::error::ClientError;
 use crate::msg::Msg;
 use futures::{AsyncRead, AsyncWrite};
 use log::debug;
@@ -93,12 +93,13 @@ pub(crate) async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
             let auth: AuthResponse = serde_json::from_str(&s)?;
             debug!("AUTH: {:?}", auth);
             return Ok(auth);
-        },
+        }
         s => {
             return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!("AUTH msg received an invalid response: {:?}", s)
-            ).into());
+                io::ErrorKind::Other,
+                format!("AUTH msg received an invalid response: {:?}", s),
+            )
+            .into());
         }
     }
 }

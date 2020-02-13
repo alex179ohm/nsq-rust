@@ -22,8 +22,8 @@
 // SOFTWARE.
 
 use crate::auth;
-use crate::conn;
 use crate::config::ConfigResponse;
+use crate::conn;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
