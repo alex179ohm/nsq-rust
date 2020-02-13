@@ -1,5 +1,5 @@
 use crate::auth;
-use crate::config::NsqConfig;
+use crate::config::ConfigResponse;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
@@ -13,7 +13,7 @@ use std::fmt::Display;
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn consumer<CHANNEL, TOPIC, S, State>(
     auth: Option<String>,
-    config: NsqConfig,
+    config: ConfigResponse,
     stream: &mut NsqIO<'_, S>,
     channel: CHANNEL,
     topic: TOPIC,
@@ -38,7 +38,7 @@ where
 
 pub(crate) async fn publish<S, State>(
     auth: Option<String>,
-    config: NsqConfig,
+    config: ConfigResponse,
     stream: &mut NsqIO<'_, S>,
     state: State,
     future: impl Publisher<State>,

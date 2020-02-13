@@ -22,9 +22,10 @@
 // SOFTWARE.
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
-/// Configuration sent to nsqd to properly config the [Client](struct.Client.html)
-/// Connection
+/// Configuration sent to nsqd to properly config the [Client](struct.Client.html) -> nsqd
+/// Connection.
 ///
 /// # Examples
 ///```
@@ -115,6 +116,12 @@ pub struct Config {
     ///
     /// Default: **0**
     pub message_timeout: u32,
+
+    #[serde(skip)]
+    cafile: Option<PathBuf>,
+
+    #[serde(skip)]
+    auth: Option<String>,
 }
 
 fn get_hostname() -> Option<String> {
@@ -128,7 +135,7 @@ fn get_hostname() -> Option<String> {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Default)]
-pub struct NsqConfig {
+pub struct ConfigResponse {
     pub max_rdy_count: u32,
     pub version: String,
     pub max_msg_timeout: u64,
@@ -158,6 +165,8 @@ pub struct ConfigBuilder {
     output_buffer_size: u64,
     output_buffer_timeout: u32,
     sample_rate: u16,
+    cafile: Option<PathBuf>,
+    auth: Option<String>,
 }
 
 impl Default for ConfigBuilder {
@@ -176,6 +185,8 @@ impl Default for ConfigBuilder {
             output_buffer_size: 16384,
             output_buffer_timeout: 250,
             sample_rate: 0,
+            cafile: None,
+            auth: None,
         }
     }
 }
@@ -223,7 +234,7 @@ impl ConfigBuilder {
     pub fn feature_negotiation(mut self, negotiation: bool) -> ConfigBuilder {
         self.feature_negotiation = negotiation;
         self
-    }
+   }
 
     pub fn heartbeat_interval(mut self, interval: i64) -> ConfigBuilder {
         self.heartbeat_interval = interval;
@@ -249,9 +260,21 @@ impl ConfigBuilder {
         self.sample_rate = rate;
         self
     }
+
+    /// Set the cafile for the client -> server tls handshake.
+    pub fn cafile<Path: Into<PathBuf>>(mut self, cafile: Path) -> ConfigBuilder {
+        self.cafile = Some(cafile.into());
+        self
+    }
+
+    /// Set the auth token for nsqd -> client [authentication](fn.authenticate.html).
+    pub fn auth<AUTH: Into<String>>(mut self, auth: AUTH) -> ConfigBuilder {
+        self.auth = Some(auth.into());
+        self
+    }
 }
 
-impl<'a> From<ConfigBuilder> for Config {
+impl From<ConfigBuilder> for Config {
     fn from(builder: ConfigBuilder) -> Config {
         Config {
             client_id: builder.client_id,
@@ -267,6 +290,8 @@ impl<'a> From<ConfigBuilder> for Config {
             user_agent: builder.user_agent,
             sample_rate: builder.sample_rate,
             message_timeout: builder.message_timeout,
+            cafile: builder.cafile,
+            auth: builder.auth,
         }
     }
 }

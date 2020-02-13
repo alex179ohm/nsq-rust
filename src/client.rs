@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::config::{Config, NsqConfig, ConfigBuilder};
+use crate::config::{Config, ConfigResponse};
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
@@ -110,7 +110,7 @@ impl<State> Client<State> {
             Err(e) => return Err(e),
         };
 
-        let nsqd_cfg: NsqConfig = serde_json::from_str(&resp)?;
+        let nsqd_cfg: ConfigResponse = serde_json::from_str(&resp)?;
         debug!("{:?}", nsqd_cfg);
         debug!("Configuration OK: {:?}", nsqd_cfg);
 
@@ -151,7 +151,7 @@ impl<State> Client<State> {
             return Err(e);
         }
 
-        let nsqd_cfg: NsqConfig;
+        let nsqd_cfg: ConfigResponse;
         match utils::identify(&mut stream, self.config.clone()).await {
             Ok(Msg::Json(s)) => {
                 nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error")

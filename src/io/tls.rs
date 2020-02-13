@@ -1,5 +1,5 @@
 use crate::auth;
-use crate::config::NsqConfig;
+use crate::config::ConfigResponse;
 use crate::error::ClientError;
 use crate::handler::Consumer;
 use crate::handler::Publisher;
@@ -21,7 +21,7 @@ use std::sync::Arc;
 pub(crate) async fn consumer<CHANNEL, TOPIC, State>(
     addr: String,
     auth: Option<String>,
-    config: NsqConfig,
+    config: ConfigResponse,
     cafile: Option<PathBuf>,
     stream: &mut TcpStream,
     channel: CHANNEL,
@@ -60,7 +60,7 @@ pub(crate) async fn publish<State>(
     state: State,
     cafile: Option<PathBuf>,
     auth: Option<String>,
-    config: NsqConfig,
+    config: ConfigResponse,
     stream: &mut TcpStream,
     future: impl Publisher<State>,
 ) -> Result<Msg, ClientError> {
