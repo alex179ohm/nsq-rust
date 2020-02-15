@@ -141,6 +141,10 @@ impl<State> Client<State> {
         }
     }
 
+    pub async fn connect<S: ToSocketAddrs>(self, _addr: S) -> Client<State> {
+        self
+    }
+
     pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, ClientError> {
         let mut tcp_stream = connect(self.addr.clone()).await?;
         let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);

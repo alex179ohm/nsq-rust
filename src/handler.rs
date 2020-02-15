@@ -12,7 +12,7 @@
 //
 // The above copyright notice and this permission notice shall be included in all
 // copies or substantial portions of the Software.
-//ext install TabNine.tabnine-vscode
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,23 +21,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Identify, Message};
-use crate::config::Config;
-use crate::error::ClientError;
+use crate::codec::Message;
 use crate::msg::Msg;
-use async_std::prelude::*;
-use futures::{AsyncWrite, Stream};
+use futures::future::BoxFuture;
+use futures::Future;
 
-pub async fn identify<IO>(io: &mut IO, config: Config) -> Result<Msg, ClientError>
+/// The [Msg](struct.Msg.heml) Handler.
+///
+/// This trait is implemented for [Fn](std/ops/trait.Fn.html) and is not meant
+/// to be used by end user if not in rare cases.
+pub trait Handler<State>: Send + Sync + 'static {
+    type Fut: Future<Output = Message> + Send + 'static;
+    fn call(&self, state: State, cx: Msg) -> Self::Fut;
+}
+
+//pub(crate) type DynConsumer = dyn (Fn(Msg) -> BoxFuture<'static, Message>) + Send + Sync + 'static;
+
+impl<F: Send + Sync + 'static, Fut, State> Handler<State> for F
 where
-    IO: AsyncWrite + Stream<Item = Result<Msg, ClientError>> + Unpin,
+    F: Fn(State, Msg) -> Fut,
+    Fut: Future + Send + 'static,
+    Fut::Output: Into<Message>,
 {
-    let msg_string = serde_json::to_string(&config)?;
-    let buf: Message = Identify::new(msg_string.as_str()).into();
-
-    if let Err(e) = io.write_all(&buf[..]).await {
-        return Err(ClientError::from(e));
-    };
-
-    io.next().await.unwrap()
+    type Fut = BoxFuture<'static, Message>;
+    fn call(&self, state: State, cx: Msg) -> Self::Fut {
+        let fut = (self)(state, cx);
+        Box::pin(async move { fut.await.into() })
+    }
 }
