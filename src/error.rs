@@ -63,9 +63,7 @@ impl fmt::Display for NsqError {
 
 impl Error for NsqError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            e => Some(e),
-        }
+        Some(self)
     }
 }
 

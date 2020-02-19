@@ -28,7 +28,6 @@ use crate::msg::Msg;
 use async_std::prelude::*;
 use futures::{AsyncWrite, AsyncRead, Stream};
 use serde::{Serialize, Deserialize};
-use serde_json;
 use log::debug;
 use std::io;
 
@@ -95,14 +94,14 @@ pub async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
         Msg::Json(s) => {
             let auth: AuthResponse = serde_json::from_str(&s)?;
             debug!("AUTH: {:?}", auth);
-            return Ok(auth);
+            Ok(auth)
         }
         s => {
-            return Err(io::Error::new(
+            Err(io::Error::new(
                 io::ErrorKind::Other,
                 format!("AUTH msg received an invalid response: {:?}", s),
             )
-            .into());
+            .into())
         }
     }
 }
