@@ -21,28 +21,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{decode_msg, Decoder};
+use crate::codec::Decoder;
 use std::fmt;
+use std::io;
 
-pub struct Msg(i64, u16, String, Vec<u8>);
+pub enum Response {
+    HeartBeat,
+    Ok,
+    Json(String),
+}
 
-impl fmt::Debug for Msg {
+impl fmt::Debug for Response {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Msg{{timestamp: {}, attemps: {}, id: {}, body: {:?}}}",
-            self.0,
-            self.1,
-            self.2,
-            &self.3[..]
-        )
+        match self {
+            Response::Ok => write!(f, "OK"),
+            Response::HeartBeat => write!(f, "__heartbeat__"),
+            Response::Json(s) => write!(f, "{:?}", s),
+        }
     }
 }
 
-impl Decoder for Msg {
-    type Error = std::io::Error;
+impl Decoder for Response {
+    type Error = io::Error;
     fn decode(buf: &[u8]) -> Result<Self, Self::Error> {
-        let msg = decode_msg(buf)?;
-        Ok(Msg(msg.0, msg.1, msg.2, msg.3))
+        let s = std::str::from_utf8(buf)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{}", e)))?;
+        match s {
+            "OK" => Ok(Response::Ok),
+            "CLOSE_WAIT" => Ok(Response::Ok),
+            "__heartbeat__" => Ok(Response::HeartBeat),
+            s => Ok(Response::Json(String::from(s))),
+        }
     }
 }

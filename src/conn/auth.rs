@@ -21,14 +21,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::conn;
-use crate::codec::{Auth, Message};
-use crate::error::ClientError;
-use crate::msg::Msg;
+use crate::codec::{Auth, Encoder};
+use crate::frame::Frame;
+use crate::response::Response;
 use async_std::prelude::*;
-use futures::{AsyncWrite, AsyncRead, Stream};
-use serde::{Serialize, Deserialize};
-use log::debug;
+use futures_io::{AsyncRead, AsyncWrite};
+use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 use std::io;
 
 /// The authentication response received by nsqd.
@@ -76,46 +75,24 @@ pub struct AuthResponse {
 /// }
 /// ```
 pub async fn authenticate<S: AsyncRead + AsyncWrite + Unpin>(
-    auth_token: Option<String>,
-    stream: &mut conn::NsqStream<'_, S>,
-) -> Result<AuthResponse, ClientError> {
-    if auth_token.is_none() {
-        return Err(io::Error::new(
+    auth_token: &str,
+    stream: &mut S,
+) -> Result<AuthResponse, Box<dyn std::error::Error>> {
+    stream
+        .write_all(&Auth::with_auth(auth_token).encode()[..])
+        .await?;
+
+    let mut buf = [0u8; 1024];
+
+    let size = stream.read(&mut buf).await?;
+
+    if let Ok(Frame::Response(Response::Json(s))) = Frame::try_from(&buf[..size]) {
+        let auth: AuthResponse = serde_json::from_str(&s)?;
+        Ok(auth)
+    } else {
+        Err(Box::new(io::Error::new(
             io::ErrorKind::Other,
-            "When configured with auth, authentication token must be provided",
-        )
-        .into());
-    };
-
-    let auth_token = auth_token.unwrap();
-    stream.reset();
-
-    match auth(stream, auth_token).await? {
-        Msg::Json(s) => {
-            let auth: AuthResponse = serde_json::from_str(&s)?;
-            debug!("AUTH: {:?}", auth);
-            Ok(auth)
-        }
-        s => {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("AUTH msg received an invalid response: {:?}", s),
-            )
-            .into())
-        }
+            "unsupported response",
+        )))
     }
-}
-
-async fn auth<IO, AUTH>(io: &mut IO, auth: AUTH) -> Result<Msg, ClientError>
-where
-    IO: AsyncWrite + Stream<Item = Result<Msg, ClientError>> + Unpin,
-    AUTH: Into<String>,
-{
-    let buf: Message = Auth::new(auth.into().as_str()).into();
-
-    if let Err(e) = io.write_all(&buf[..]).await {
-        return Err(ClientError::from(e));
-    };
-
-    io.next().await.unwrap()
 }

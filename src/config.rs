@@ -60,6 +60,31 @@ pub struct Config {
     rdy: u32,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            client_id: get_hostname(),
+            user_agent: String::from("rust nsq"),
+            hostname: get_hostname(),
+            deflate: false,
+            deflate_level: 6,
+            snappy: false,
+            tls_v1: true,
+            feature_negotiation: true,
+            heartbeat_interval: 30000,
+            message_timeout: 0,
+            output_buffer_size: 16384,
+            output_buffer_timeout: 250,
+            sample_rate: 0,
+            cafile: None,
+            auth: None,
+            channel: None,
+            topic: None,
+            rdy: 0,
+        }
+    }
+}
+
 fn get_hostname() -> Option<String> {
     if let Ok(h) = hostname::get() {
         if let Ok(s) = h.into_string() {

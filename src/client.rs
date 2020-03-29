@@ -21,19 +21,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::config::{Config, ConfigResponse};
+use crate::config::Config;
 use crate::conn;
-use crate::error::ClientError;
 use crate::handler::Handler;
 use crate::publisher::Publisher;
-use crate::msg::Msg;
+use crate::response::Response;
 use async_std::net::{TcpStream, ToSocketAddrs};
 use log::{debug, info};
 use std::fmt::{Debug, Display};
 use std::path::PathBuf;
 
-#[derive(Clone)]
-pub struct Client<State> {
+#[derive(Clone, Debug)]
+pub struct Client<State: Debug> {
     addr: String,
     config: Config,
     auth: Option<String>,
@@ -42,153 +41,139 @@ pub struct Client<State> {
     state: State,
 }
 
-impl Client<()> {
-    pub fn new<ADDR: Into<String>>(
-        addr: ADDR,
-        config: Config,
-        auth: Option<String>,
-        cafile: Option<PathBuf>,
-    ) -> Self {
-        Client {
-            addr: addr.into(),
-            config,
-            auth,
-            cafile,
+pub struct Builder {
+    addr: String,
+    config: Config,
+    auth: Option<String>,
+    cafile: Option<PathBuf>,
+    rdy: u32,
+}
+
+impl Default for Builder {
+    fn default() -> Self {
+        Builder {
+            addr: String::new(),
+            config: Config::default(),
+            auth: None,
+            cafile: None,
             rdy: 0,
-            state: (),
         }
     }
 }
 
-impl<State> Client<State> {
-    pub fn with_state<ADDR: Into<String>>(
-        addr: ADDR,
-        config: Config,
-        auth: Option<String>,
-        cafile: Option<PathBuf>,
-        state: State,
-    ) -> Self {
+impl Builder {
+    #[must_use]
+    pub fn new() -> Builder {
+        Builder::default()
+    }
+
+    pub fn addr(mut self, addr: impl Into<String>) -> Builder {
+        self.addr = addr.into();
+        self
+    }
+
+    #[must_use]
+    pub fn config(mut self, config: Config) -> Builder {
+        self.config = config;
+        self
+    }
+
+    pub fn auth(mut self, auth: impl Into<String>) -> Builder {
+        self.auth = Some(auth.into());
+        self
+    }
+
+    pub fn cafile(mut self, cafile: impl Into<PathBuf>) -> Builder {
+        self.cafile = Some(cafile.into());
+        self
+    }
+
+    #[must_use]
+    pub fn rdy(mut self, rdy: u32) -> Builder {
+        self.rdy = rdy;
+        self
+    }
+
+    #[must_use]
+    pub fn build(self) -> Client<()> {
         Client {
-            addr: addr.into(),
-            config,
-            auth,
-            cafile,
-            rdy: 0,
+            addr: self.addr,
+            config: self.config,
+            auth: self.auth,
+            cafile: self.cafile,
+            rdy: self.rdy,
+            state: (),
+        }
+    }
+
+    pub fn build_with_state<State: Debug>(self, state: State) -> Client<State> {
+        Client {
+            addr: self.addr,
+            config: self.config,
+            auth: self.auth,
+            cafile: self.cafile,
+            rdy: self.rdy,
             state,
         }
     }
 }
 
-impl<State> Client<State> {
+impl<State: Debug> Client<State> {
     pub async fn consumer<CHANNEL, TOPIC>(
         self,
         channel: CHANNEL,
         topic: TOPIC,
         _future: impl Handler<State>,
-    ) -> Result<(), ClientError>
+    ) -> Result<(), Box<dyn std::error::Error>>
     where
         CHANNEL: Into<String> + Display + Copy,
         TOPIC: Into<String> + Display + Copy,
     {
-        let mut tcp_stream = connect(self.addr.clone()).await?;
+        let mut stream = connect(self.addr.clone()).await?;
 
-        if let Err(e) = conn::magic(&mut tcp_stream).await {
-            return Err(e);
-        }
+        conn::magic(&mut stream).await?;
 
-        let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
+        //let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
 
-        let resp = match conn::identify(&mut stream, self.config.clone()).await {
-            Ok(Msg::Json(s)) => s,
-            Ok(r) => {
-                return Err(ClientError::from(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("unexpected response: {:?}", r),
-                )))
-            }
-            Err(e) => return Err(e),
-        };
+        let cfg = conn::identify(&mut stream, self.config.clone()).await?;
 
-        let nsqd_cfg: ConfigResponse = serde_json::from_str(&resp)?;
-        debug!("{:?}", nsqd_cfg);
-        debug!("Configuration OK: {:?}", nsqd_cfg);
+        debug!("{:?}", cfg);
+        debug!("Configuration OK: {:?}", cfg);
 
-        if nsqd_cfg.tls_v1 {
-            conn::tls::consume(
-                self.addr,
-                self.auth,
-                nsqd_cfg,
-                self.cafile,
-                &mut tcp_stream,
-                channel,
-                topic,
-                self.rdy,
-                _future,
-            )
-            .await
-        } else {
-            conn::tcp::consume(
-                self.auth,
-                nsqd_cfg,
-                &mut stream,
-                channel,
-                topic,
-                self.rdy,
-                self.state,
-                _future,
-            )
-            .await
-        }
+        Ok(())
     }
 
     pub async fn connect<S: ToSocketAddrs>(self, _addr: S) -> Client<State> {
         self
     }
 
-    pub async fn publish(self, future: impl Publisher<State>) -> Result<Msg, ClientError> {
-        let mut tcp_stream = connect(self.addr.clone()).await?;
-        let mut stream = conn::NsqStream::new(&mut tcp_stream, 1024);
+    pub async fn publish(
+        self,
+        future: impl Publisher<State>,
+    ) -> Result<Response, Box<dyn std::error::Error>> {
+        let mut stream = connect(self.addr.clone()).await?;
 
-        if let Err(e) = conn::magic(&mut stream).await {
-            return Err(e);
-        }
+        conn::magic(&mut stream).await?;
 
-        let nsqd_cfg: ConfigResponse;
-        match conn::identify(&mut stream, self.config.clone()).await {
-            Ok(Msg::Json(s)) => {
-                nsqd_cfg = serde_json::from_str(&s).expect("json deserialize error")
-            }
-            Err(e) => return Err(e),
-            _ => unreachable!(),
-        }
-        debug!("{:?}", nsqd_cfg);
-        info!("Configuration OK: {:?}", nsqd_cfg);
+        let cfg = conn::identify(&mut stream, self.config.clone()).await?;
 
-        if nsqd_cfg.tls_v1 {
-            conn::tls::publish(
-                self.addr,
-                self.state,
-                self.cafile,
-                self.auth,
-                nsqd_cfg,
-                &mut tcp_stream,
-                future,
-            )
-            .await
-        } else {
-            conn::tcp::publish(self.auth, nsqd_cfg, &mut stream, self.state, future).await
-        }
+        debug!("{:?}", cfg);
+        info!("Configuration OK: {:?}", cfg);
+
+        Ok(Response::Ok)
     }
 }
 
 #[doc(hidden)]
-async fn connect<ADDR: ToSocketAddrs + Debug>(addr: ADDR) -> Result<TcpStream, ClientError> {
+async fn connect<ADDR: ToSocketAddrs + Debug>(
+    addr: ADDR,
+) -> Result<TcpStream, Box<dyn std::error::Error>> {
     debug!("Trying to connect to: {:?}", addr);
     match TcpStream::connect(addr).await {
         Ok(s) => {
             debug!("Connected: {:?}", s.peer_addr());
             Ok(s)
         }
-        Err(e) => Err(ClientError::from(e)),
+        Err(e) => Err(Box::new(e)),
     }
 }

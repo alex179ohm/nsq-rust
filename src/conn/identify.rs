@@ -21,23 +21,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Identify, Message};
-use crate::config::Config;
-use crate::error::ClientError;
-use crate::msg::Msg;
-use async_std::prelude::*;
-use futures::{AsyncWrite, Stream};
+use crate::codec::{Encoder, Identify};
+use crate::config::{Config, ConfigResponse};
+use crate::frame::Frame;
+use crate::response::Response;
+use futures_io::{AsyncRead, AsyncWrite};
+use futures_util::io::{AsyncReadExt, AsyncWriteExt};
+use std::convert::TryFrom;
+use std::io;
 
-pub async fn identify<IO>(io: &mut IO, config: Config) -> Result<Msg, ClientError>
-where
-    IO: AsyncWrite + Stream<Item = Result<Msg, ClientError>> + Unpin,
-{
-    let msg_string = serde_json::to_string(&config)?;
-    let buf: Message = Identify::new(msg_string.as_str()).into();
+pub async fn identify<S: AsyncWrite + AsyncRead + Unpin>(
+    stream: &mut S,
+    config: Config,
+) -> Result<ConfigResponse, std::io::Error> {
+    let cfg = serde_json::to_string(&config)?;
 
-    if let Err(e) = io.write_all(&buf[..]).await {
-        return Err(ClientError::from(e));
-    };
+    stream
+        .write_all(&Identify::with_config(&cfg).encode())
+        .await?;
 
-    io.next().await.unwrap()
+    let mut buf = [0u8; 1024];
+
+    let size = stream.read(&mut buf).await?;
+
+    match Frame::try_from(&buf[..size]) {
+        Ok(Frame::Response(Response::Json(s))) => {
+            let cfg_response: ConfigResponse = serde_json::from_str(&s)?;
+
+            log::debug!("nsqd config: {:?}", cfg_response);
+
+            Ok(cfg_response)
+        }
+        Ok(s) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("unsupported response: {:?}", s),
+        )),
+        Err(e) => Err(e),
+    }
 }

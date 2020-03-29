@@ -21,20 +21,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+mod auth;
 mod identify;
-mod io_stream;
 mod magic;
 mod publish;
 mod rdy;
 mod subscribe;
-mod auth;
-pub mod tcp;
-pub mod tls;
 
-pub(crate) use auth::authenticate;
-pub(crate) use identify::identify;
-pub(crate) use io_stream::NsqStream;
-pub(crate) use magic::magic;
-pub(crate) use publish::publish;
-pub(crate) use rdy::rdy;
-pub(crate) use subscribe::subscribe;
+pub use auth::authenticate;
+pub use identify::identify;
+pub use magic::magic;
+pub use publish::publish;
+pub use rdy::rdy;
+pub use subscribe::subscribe;

@@ -21,17 +21,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::{Magic, Message};
-use crate::error::ClientError;
-use async_std::io::prelude::*;
+use crate::codec::{Encoder, Magic};
+use futures_io::AsyncWrite;
+use futures_util::io::AsyncWriteExt;
 
 /// Send the [Magic](struct.Magic.html) to the nsqd server.
-pub async fn magic<IO: Write + Unpin>(io: &mut IO) -> Result<(), ClientError> {
-    let buf: Message = Magic {}.into();
-
-    if let Err(e) = io.write_all(&buf[..]).await {
-        return Err(ClientError::from(e));
-    };
-
-    Ok(())
+pub async fn magic<S: AsyncWrite + Unpin>(stream: &mut S) -> Result<(), std::io::Error> {
+    stream.write_all(&Magic {}.encode()).await
 }

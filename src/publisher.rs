@@ -21,9 +21,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::Message;
-use futures::future::BoxFuture;
-use futures::Future;
+use crate::codec::{Dpub, Encoder, Mpub, Pub};
+use bytes::BytesMut;
+use futures_core::future::Future;
+use futures_util::future::BoxFuture;
+
+pub struct Message(BytesMut);
+
+impl From<Pub<'_>> for Message {
+    fn from(p: Pub<'_>) -> Self {
+        Message(p.encode())
+    }
+}
+
+impl From<Dpub<'_>> for Message {
+    fn from(d: Dpub<'_>) -> Self {
+        Message(d.encode())
+    }
+}
+
+impl From<Mpub<'_>> for Message {
+    fn from(m: Mpub<'_>) -> Self {
+        Message(m.encode())
+    }
+}
 
 pub trait Publisher<State>: Send + Sync + 'static {
     type Fut: Future<Output = Message> + Send + 'static;

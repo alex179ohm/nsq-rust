@@ -21,11 +21,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use std::error::Error;
-use std::{fmt, io};
+use crate::codec::Decoder;
+use std::convert::TryFrom;
+use std::fmt;
+use std::io;
+use std::str;
 
-#[derive(Debug)]
-pub enum NsqError {
+pub enum Error {
     Invalid,
     Body,
     Topic,
@@ -41,7 +43,7 @@ pub enum NsqError {
     Unauthorized,
 }
 
-impl fmt::Display for NsqError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Invalid => write!(f, "E_INVALID"),
@@ -61,80 +63,48 @@ impl fmt::Display for NsqError {
     }
 }
 
-impl Error for NsqError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(self)
     }
 }
 
-impl From<&str> for NsqError {
-    fn from(s: &str) -> NsqError {
+impl TryFrom<&str> for Error {
+    type Error = io::Error;
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "E_INVALID" => NsqError::Invalid,
-            "E_BAD_BODY" => NsqError::Body,
-            "E_BAD_TOPIC" => NsqError::Topic,
-            "E_BAD_CHANNEL" => NsqError::Channel,
-            "E_BAD_MESSAGE" => NsqError::Message,
-            "E_PUB_FAILED" => NsqError::Pub,
-            "E_MPUB_FAILED" => NsqError::Mpub,
-            "E_DPUB_FAILED" => NsqError::Dpub,
-            "E_FIN_FAILED" => NsqError::Fin,
-            "E_REQ_FAILED" => NsqError::Req,
-            "E_TOUCH_FAILED" => NsqError::Touch,
-            "E_AUTH_FAILED" => NsqError::Auth,
-            "E_UNAUTHORIZED" => NsqError::Unauthorized,
-            s => unreachable!(s),
+            "E_INVALID" => Ok(Error::Invalid),
+            "E_BAD_BODY" => Ok(Error::Body),
+            "E_BAD_TOPIC" => Ok(Error::Topic),
+            "E_BAD_CHANNEL" => Ok(Error::Channel),
+            "E_BAD_MESSAGE" => Ok(Error::Message),
+            "E_PUB_FAILED" => Ok(Error::Pub),
+            "E_MPUB_FAILED" => Ok(Error::Mpub),
+            "E_DPUB_FAILED" => Ok(Error::Dpub),
+            "E_FIN_FAILED" => Ok(Error::Fin),
+            "E_REQ_FAILED" => Ok(Error::Req),
+            "E_TOUCH_FAILED" => Ok(Error::Touch),
+            "E_AUTH_FAILED" => Ok(Error::Auth),
+            "E_UNAUTHORIZED" => Ok(Error::Unauthorized),
+            s => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("error on parsing: {:?}", s),
+            )),
         }
     }
 }
 
-#[derive(Debug)]
-pub enum ClientError {
-    Json(serde_json::Error),
-    Io(io::Error),
-    Nsq(NsqError),
-}
-
-impl fmt::Display for ClientError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Json(e) => write!(f, "{}", e),
-            Self::Io(e) => write!(f, "{}", e),
-            Self::Nsq(e) => write!(f, "{}", e),
-        }
-    }
-}
-
-impl Error for ClientError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Io(e) => Some(e),
-            Self::Json(e) => Some(e),
-            Self::Nsq(e) => Some(e),
-        }
-    }
-}
-
-impl From<&str> for ClientError {
-    fn from(e: &str) -> Self {
-        ClientError::Nsq(NsqError::from(e))
-    }
-}
-
-impl From<serde_json::Error> for ClientError {
-    fn from(e: serde_json::Error) -> Self {
-        ClientError::Json(e)
-    }
-}
-
-impl From<io::Error> for ClientError {
-    fn from(e: io::Error) -> Self {
-        ClientError::Io(e)
-    }
-}
-
-impl From<ClientError> for io::Error {
-    fn from(e: ClientError) -> Self {
-        io::Error::new(io::ErrorKind::Other, format!("{}", e))
+impl Decoder for Error {
+    type Error = io::Error;
+    fn decode(buf: &[u8]) -> Result<Self, Self::Error> {
+        let s = str::from_utf8(buf)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{}", e)))?;
+        Error::try_from(s)
     }
 }

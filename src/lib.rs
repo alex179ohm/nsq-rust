@@ -21,18 +21,22 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-
-mod client;
+#[cfg(feature = "async-std")]
+pub mod client;
 mod codec;
 mod config;
 mod conn;
 mod error;
+mod frame;
 mod handler;
-mod publisher;
 mod msg;
+mod publisher;
+mod response;
+mod stream;
 
 pub mod prelude {
-    pub use crate::client::Client;
-    pub use crate::codec::{Cls, Dpub, Fin, Message, Mpub, Pub, Req, Touch};
+    pub use crate::codec::{Auth, Cls, Dpub, Fin, Mpub, Pub, Req, Sub, Touch};
     pub use crate::config::{Config, ConfigBuilder};
+    pub use crate::conn::*;
+    pub use crate::publisher::{Message, Publisher};
 }

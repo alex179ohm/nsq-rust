@@ -21,19 +21,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::Message;
-use crate::error::ClientError;
-use crate::msg::Msg;
-use async_std::prelude::*;
-use futures::{AsyncWrite, Stream};
+use crate::codec::Encoder;
+use crate::frame::Frame;
+use crate::response::Response;
+use futures_io::{AsyncRead, AsyncWrite};
+use futures_util::{AsyncReadExt, AsyncWriteExt};
+use std::convert::TryFrom;
+use std::io;
 
-pub async fn publish<S>(io: &mut S, msg: Message) -> Result<Msg, ClientError>
-where
-    S: AsyncWrite + Stream<Item = Result<Msg, ClientError>> + Unpin,
-{
-    if let Err(e) = io.write_all(&msg[..]).await {
-        return Err(ClientError::from(e));
+pub async fn publish<S: AsyncWrite + AsyncRead + Unpin>(
+    stream: &mut S,
+    msg: impl Encoder,
+) -> Result<Response, io::Error> {
+    stream.write_all(&msg.encode()).await?;
+
+    let mut buf = [0u8; 1024];
+
+    let size = stream.read(&mut buf).await?;
+
+    match Frame::try_from(&buf[..size]) {
+        Ok(Frame::Response(Response::Ok)) => Ok(Response::Ok),
+        Ok(r) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("unsupported response: {:?}", r),
+        )),
+        Err(e) => Err(e),
     }
-
-    io.next().await.unwrap()
 }

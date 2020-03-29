@@ -1,11 +1,10 @@
 use async_std::task;
-use femme;
-use log;
+use nsq_rust::client;
 use nsq_rust::prelude::*;
 use std::error::Error;
 
 async fn my_pub(_app: ()) -> Message {
-    Pub::new("test".to_owned(), b"ciao".to_vec()).into()
+    Pub::with_topic_msg("test", &b"ciao"[..]).into()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -13,9 +12,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let config: Config = ConfigBuilder::new().into();
     //let cafile = PathBuf::from("./tests/end.chain");
     task::block_on(async move {
-        let res = Client::new("localhost:4150", config, None, None)
-            .publish(my_pub)
-            .await;
+        let clnt = client::Builder::new()
+            .addr("http://localhost:3000")
+            .config(config)
+            //.cafile(cafile)
+            .build();
+
+        let res = clnt.publish(my_pub).await;
         println!("{:?}", res);
     });
     Ok(())

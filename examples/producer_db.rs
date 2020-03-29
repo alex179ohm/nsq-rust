@@ -1,10 +1,10 @@
 use async_std::task;
-use femme;
-use log;
+use nsq_rust::client;
 use nsq_rust::prelude::*;
 use std::collections::HashMap;
 use std::error::Error;
 
+#[derive(Debug)]
 struct App {
     pub db: HashMap<String, String>,
 }
@@ -16,10 +16,10 @@ impl App {
 }
 
 async fn my_pub(app: App) -> Message {
-    let topic = "test".to_owned();
-    let msg = app.db.get(&topic).unwrap();
+    let topic = "test";
+    let msg = app.db.get(&topic.to_owned()).unwrap();
 
-    Pub::new(topic, msg.as_bytes().to_vec()).into()
+    Pub::with_topic_msg(topic, msg.as_bytes()).into()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -31,9 +31,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let _ = app.db.insert("test".to_owned(), "msg".to_owned());
 
     task::block_on(async move {
-        let res = Client::with_state("localhost:4150", config, None, None, app)
-            .publish(my_pub)
-            .await;
+        let clnt = client::Builder::new()
+            .addr("localhost:4150")
+            .config(config)
+            .build_with_state(app);
+
+        log::debug!("client created: {:?}", clnt);
+
+        let res = clnt.publish(my_pub).await;
         log::trace!("{:?}", res);
     });
 

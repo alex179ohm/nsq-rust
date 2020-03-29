@@ -21,18 +21,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::codec::Message;
+//use crate::client_response::Response;
 use crate::msg::Msg;
-use futures::future::BoxFuture;
-use futures::Future;
+use futures_core::future::Future;
+use futures_util::future::BoxFuture;
 
 /// The [Msg](struct.Msg.heml) Handler.
 ///
 /// This trait is implemented for [Fn](std/ops/trait.Fn.html) and is not meant
 /// to be used by end user if not in rare cases.
 pub trait Handler<State>: Send + Sync + 'static {
-    type Fut: Future<Output = Message> + Send + 'static;
-    fn call(&self, state: State, cx: Msg) -> Self::Fut;
+    type Fut: Future<Output = Msg> + Send + 'static;
+    fn call(&self, state: State, msg: Msg) -> Self::Fut;
 }
 
 //pub(crate) type DynConsumer = dyn (Fn(Msg) -> BoxFuture<'static, Message>) + Send + Sync + 'static;
@@ -41,11 +41,11 @@ impl<F: Send + Sync + 'static, Fut, State> Handler<State> for F
 where
     F: Fn(State, Msg) -> Fut,
     Fut: Future + Send + 'static,
-    Fut::Output: Into<Message>,
+    Fut::Output: Into<Msg>,
 {
-    type Fut = BoxFuture<'static, Message>;
-    fn call(&self, state: State, cx: Msg) -> Self::Fut {
-        let fut = (self)(state, cx);
+    type Fut = BoxFuture<'static, Msg>;
+    fn call(&self, state: State, msg: Msg) -> Self::Fut {
+        let fut = (self)(state, msg);
         Box::pin(async move { fut.await.into() })
     }
 }
